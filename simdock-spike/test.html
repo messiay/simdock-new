@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SimDock Sprint 0 Spike - WASM Docking Benchmark</title>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #1a1a2e;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        select {
+            padding: 12px 20px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .log-container {
+            background: #0d1117;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-time {
+            color: #00d9ff;
+        }
+
+        .log-info {
+            color: #00ff88;
+        }
+
+        .log-success {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .log-error {
+            color: #ff6b6b;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+        }
+
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .warning {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-icon {
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧬 SimDock Engine Spike</h1>
+
+        <div class="warning">
+            <span class="warning-icon">⚠️</span>
+            <span><strong>Browser Requirement:</strong> This requires Chrome/Edge with SharedArrayBuffer support.
+                Must be served via HTTPS or localhost with proper COOP/COEP headers.</span>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">Benchmark Controls</h2>
+            <div class="controls">
+                <select id="exhaustiveness">
+                    <option value="1">Exhaustiveness: 1 (Quick)</option>
+                    <option value="4">Exhaustiveness: 4 (Fast)</option>
+                    <option value="8" selected>Exhaustiveness: 8 (Standard)</option>
+                    <option value="16">Exhaustiveness: 16 (Thorough)</option>
+                    <option value="32">Exhaustiveness: 32 (Very Thorough)</option>
+                </select>
+                <button id="dockBtn" onclick="runBenchmark()">🚀 Run Benchmark Dock</button>
+            </div>
+            <div class="progress" id="progressContainer" style="display: none;">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">📊 Results</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="dockTime">--</div>
+                    <div class="stat-label">Docking Time (s)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="bestScore">--</div>
+                    <div class="stat-label">Best Score (kcal/mol)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="numModes">--</div>
+                    <div class="stat-label">Binding Modes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="status">Ready</div>
+                    <div class="stat-label">Status</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">📝 Console Log</h2>
+            <div class="log-container" id="log"></div>
+        </div>
+
+        <div class="card" id="outputCard" style="display: none;">
+            <h2 style="margin-bottom: 20px;">🧪 Docking Output (PDBQT)</h2>
+            <div class="log-container" id="output" style="white-space: pre; font-size: 0.8rem;"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // SimDock WASM Glue Code - AutoDock Vina WebAssembly Binding
+        // ====================================================================
+        // AI-Generated glue code that bridges JavaScript with the Vina WASM module
+        // Based on the Webina library from Durrant Lab (durrantlab.com/webina)
+        // ====================================================================
+
+        // Import the WASM module (ES Module format)
+        import WEBINA_MODULE from './vina.js';
+
+        // Global state
+        let vinaModule = null;
+        let isInitialized = false;
+
+        // Logging utility
+        function log(msg, type = 'info') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const typeClass = `log-${type}`;
+            logEl.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> <span class="${typeClass}">${msg}</span></div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${msg}`);
+        }
+
+        // Update stats display
+        function updateStat(id, value) {
+            document.getElementById(id).textContent = value;
+        }
+
+        // Parse binding scores from Vina output
+        function parseScores(outputPdbqt) {
+            const scores = [];
+            const lines = outputPdbqt.split('\n');
+            for (const line of lines) {
+                if (line.includes('REMARK VINA RESULT:')) {
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 4) {
+                        scores.push(parseFloat(parts[3]));
+                    }
+                }
+            }
+            return scores;
+        }
+
+        // Initialize the WASM module
+        async function initializeVina() {
+            if (isInitialized) return vinaModule;
+
+            log('Initializing AutoDock Vina WASM module...');
+            updateStat('status', 'Loading');
+
+            try {
+                // Load the receptor and ligand files
+                const [receptorResponse, ligandResponse] = await Promise.all([
+                    fetch('./receptor.pdbqt'),
+                    fetch('./ligand.pdbqt')
+                ]);
+
+                if (!receptorResponse.ok || !ligandResponse.ok) {
+                    throw new Error('Failed to load PDBQT files. Make sure receptor.pdbqt and ligand.pdbqt exist.');
+                }
+
+                const receptorContent = await receptorResponse.text();
+                const ligandContent = await ligandResponse.text();
+
+                log(`Loaded receptor: ${receptorContent.split('\n').length} lines`);
+                log(`Loaded ligand: ${ligandContent.split('\n').length} lines`);
+
+                // Store for later use
+                window.receptorContent = receptorContent;
+                window.ligandContent = ligandContent;
+
+                isInitialized = true;
+                log('WASM module ready!', 'success');
+                updateStat('status', 'Ready');
+
+                return true;
+            } catch (error) {
+                log(`Initialization error: ${error.message}`, 'error');
+                updateStat('status', 'Error');
+                throw error;
+            }
+        }
+
+        // Run docking with specified parameters
+        async function runDocking(params) {
+            return new Promise((resolve, reject) => {
+                let stdOut = '';
+                let stdErr = '';
+                let moduleInstance = null;
+
+                const moduleConfig = {
+                    logReadFiles: true,
+                    noInitialRun: true,
+                    locateFile: (path) => {
+                        // Help WASM find the .wasm file and worker
+                        return `./${path}`;
+                    },
+                    preRun: [
+                        function (instance) {
+                            // Write input files to the virtual filesystem
+                            instance.FS.writeFile('/receptor.pdbqt', window.receptorContent);
+                            instance.FS.writeFile('/ligand.pdbqt', window.ligandContent);
+                            moduleInstance = instance;
+                            log('Input files written to virtual filesystem');
+                        }
+                    ],
+                    print: (text) => {
+                        stdOut += text + '\n';
+                        log(`[Vina] ${text}`);
+                    },
+                    printErr: (text) => {
+                        stdErr += text + '\n';
+                        if (text.toLowerCase().includes('error')) {
+                            log(`[Vina Error] ${text}`, 'error');
+                        } else {
+                            log(`[Vina] ${text}`);
+                        }
+                    },
+                    onExit: (code) => {
+                        try {
+                            if (moduleInstance && code === 0) {
+                                const outputPdbqt = moduleInstance.FS.readFile('/output.pdbqt', { encoding: 'utf8' });
+                                resolve({
+                                    output: outputPdbqt,
+                                    stdout: stdOut,
+                                    stderr: stdErr,
+                                    exitCode: code
+                                });
+                            } else {
+                                reject(new Error(`Vina exited with code ${code}`));
+                            }
+                        } catch (e) {
+                            reject(e);
+                        }
+                    },
+                    onAbort: (reason) => {
+                        reject(new Error(`WASM abort: ${reason}`));
+                    }
+                };
+
+                // Call the factory function - it returns a Promise that resolves to the module
+                // The factory accepts the config and returns the configured module
+                WEBINA_MODULE(moduleConfig)
+                    .then((mod) => {
+                        log('WASM module ready, starting docking...');
+                        moduleInstance = mod;
+
+                        // Build command line arguments
+                        const args = [
+                            '--receptor', '/receptor.pdbqt',
+                            '--ligand', '/ligand.pdbqt',
+                            '--center_x', params.center_x.toString(),
+                            '--center_y', params.center_y.toString(),
+                            '--center_z', params.center_z.toString(),
+                            '--size_x', params.size_x.toString(),
+                            '--size_y', params.size_y.toString(),
+                            '--size_z', params.size_z.toString(),
+                            '--exhaustiveness', params.exhaustiveness.toString(),
+                            '--out', '/output.pdbqt'
+                        ];
+
+                        if (params.num_modes) {
+                            args.push('--num_modes', params.num_modes.toString());
+                        }
+
+                        log(`Running with args: ${args.join(' ')}`);
+                        mod.callMain(args);
+                    })
+                    .catch(reject);
+            });
+        }
+
+        // Main benchmark function
+        async function runBenchmark() {
+            const btn = document.getElementById('dockBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+
+            btn.disabled = true;
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+
+            try {
+                // Initialize if needed
+                await initializeVina();
+                progressBar.style.width = '20%';
+
+                const exhaustiveness = parseInt(document.getElementById('exhaustiveness').value);
+
+                log(`Starting benchmark with exhaustiveness=${exhaustiveness}...`);
+                updateStat('status', 'Docking');
+                progressBar.style.width = '30%';
+
+                // Docking parameters for rosuvastatin in HMG-CoA reductase active site
+                // These coordinates are typical for the statin binding pocket
+                const dockingParams = {
+                    center_x: 16.0,
+                    center_y: 14.0,
+                    center_z: 4.0,
+                    size_x: 20,
+                    size_y: 20,
+                    size_z: 20,
+                    exhaustiveness: exhaustiveness,
+                    num_modes: 9
+                };
+
+                const startTime = performance.now();
+
+                // Run the docking
+                const result = await runDocking(dockingParams);
+
+                const endTime = performance.now();
+                const dockingTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                progressBar.style.width = '100%';
+
+                // Parse results
+                const scores = parseScores(result.output);
+                const bestScore = scores.length > 0 ? scores[0].toFixed(1) : 'N/A';
+                const numModes = scores.length;
+
+                // Update display
+                updateStat('dockTime', dockingTime);
+                updateStat('bestScore', bestScore);
+                updateStat('numModes', numModes);
+                updateStat('status', 'Complete');
+
+                log(`✅ Docking completed in ${dockingTime} seconds`, 'success');
+                log(`Best binding affinity: ${bestScore} kcal/mol`, 'success');
+                log(`Found ${numModes} binding modes`, 'success');
+
+                // Show output
+                const outputCard = document.getElementById('outputCard');
+                const outputEl = document.getElementById('output');
+                outputCard.style.display = 'block';
+                outputEl.textContent = result.output;
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                updateStat('status', 'Error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        // Make runBenchmark available globally
+        window.runBenchmark = runBenchmark;
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('SimDock WASM Engine Spike loaded');
+            log('Test system: HMG-CoA reductase (1HWL) + Rosuvastatin');
+            log('Click "Run Benchmark Dock" to start');
+
+            // Check for SharedArrayBuffer support
+            if (typeof SharedArrayBuffer === 'undefined') {
+                log('⚠️ SharedArrayBuffer not available. WASM threading disabled.', 'error');
+                log('This page needs to be served with COOP/COEP headers for full performance.', 'error');
+            } else {
+                log('✓ SharedArrayBuffer available - multi-threading enabled', 'success');
+            }
+        });
+    </script>
+</body>
+
+</html>
