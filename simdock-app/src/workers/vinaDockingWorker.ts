@@ -1,6 +1,17 @@
 // Dedicated Web Worker for Vina Docking
-// Handles docking in a separate thread to prevent UI freezing
-// Uses onExit callback and forces single-threaded execution to avoid nested worker crashes
+// Prevents UI freezing and handles Emscripten quirks
+
+// ============================================
+// THE CRITICAL HACK: Prevent nested workers
+// ============================================
+// Emscripten checks `typeof Worker !== 'undefined'`
+// Deleting these forces it to use single-threaded fallback
+delete (self as any).Worker;
+delete (self as any).SharedArrayBuffer;
+delete (self as any).Atomics;
+
+// Timeout for docking calculations (60 seconds)
+const DOCKING_TIMEOUT_MS = 60000;
 
 self.onmessage = async (e: MessageEvent) => {
     const {
@@ -11,56 +22,54 @@ self.onmessage = async (e: MessageEvent) => {
     } = e.data;
 
     try {
-        console.log('[DockingWorker] Received job. Loading Vina Classic...');
+        console.log('[DockingWorker] Received job. Loading Vina...');
+        postMessage({ type: 'log', message: 'Initializing Vina WASM...' });
 
-        // 1. Load Vina Classic (Attempting to use the potentially more compatible build)
+        // 1. Load Vina Classic (more compatible build)
         const vinaUrl = `${globalThis.location.origin}${baseUrl}/vina.classic.js?v=${Date.now()}`;
         const moduleImport = await import(/* @vite-ignore */ vinaUrl);
         const VinaFactory = moduleImport.default;
 
         // Promise to handle async Vina completion
-        let completionResolve: () => void;
+        let completionResolve: (exitCode: number) => void;
         let completionReject: (reason: any) => void;
-        const completionPromise = new Promise<void>((resolve, reject) => {
+        const completionPromise = new Promise<number>((resolve, reject) => {
             completionResolve = resolve;
             completionReject = reject;
         });
 
-        let exitCode = 0;
+        const outputFile = '/output.pdbqt';
 
-        // 2. Initialize Vina
+        // 2. Initialize Vina with robust configuration
         const config = {
             logReadFiles: true,
             noInitialRun: true,
             locateFile: (path: string) => `${baseUrl}/${path}`,
             mainScriptUrlOrBlob: vinaUrl,
 
-            // ATTEMPT TO DISABLE THREAD POOL SPAWNING
+            // Threading is already disabled via delete above,
+            // but this acts as defense-in-depth
             pthreadPoolSize: 0,
 
             print: (text: string) => {
-                console.log(`[Vina STDOUT] ${text}`);
+                console.log(`[Vina] ${text}`);
                 postMessage({ type: 'log', message: text });
             },
             printErr: (text: string) => {
-                console.warn(`[Vina STDERR] ${text}`);
-                // Filter out the specific worker error if it's non-fatal, but usually it is fatal
+                console.warn(`[Vina ERR] ${text}`);
                 postMessage({ type: 'log', message: `[STDERR] ${text}` });
             },
             onExit: (code: number) => {
-                console.log(`[DockingWorker] Vina onExit called with code: ${code}`);
-                exitCode = code;
-                completionResolve();
+                console.log(`[DockingWorker] Vina onExit: ${code}`);
+                // Small delay to ensure FS writes are flushed
+                setTimeout(() => completionResolve(code), 50);
             },
             quit: (code: number, toThrow: any) => {
-                console.log(`[DockingWorker] Vina quit called: ${code}`);
-                exitCode = code;
+                console.log(`[DockingWorker] Vina quit: ${code}`);
+                // Don't reject here, let onExit handle it
                 throw toThrow;
             }
         };
-
-        // Hack: Mask Worker to force Vina to run on this thread if pthreadPoolSize doesn't work
-        (self as any).Worker = undefined; // UPDATED: Force Single Threaded Execution
 
         const vinaMod = await VinaFactory(config);
 
@@ -68,13 +77,15 @@ self.onmessage = async (e: MessageEvent) => {
         if (vinaMod.ready) await vinaMod.ready;
 
         console.log('[DockingWorker] Vina Ready. Writing files...');
+        postMessage({ type: 'log', message: 'Writing input files to virtual filesystem...' });
 
-        // 3. Write Files
+        // 3. Write Files to Virtual FS
         try {
-            vinaMod.FS.writeFile('receptor.pdbqt', receptor);
-            vinaMod.FS.writeFile('ligand.pdbqt', ligand);
-            const rStat = vinaMod.FS.stat('receptor.pdbqt');
-            postMessage({ type: 'log', message: `Files written. Receptor: ${rStat.size}b` });
+            vinaMod.FS.writeFile('/receptor.pdbqt', receptor);
+            vinaMod.FS.writeFile('/ligand.pdbqt', ligand);
+            const rStat = vinaMod.FS.stat('/receptor.pdbqt');
+            const lStat = vinaMod.FS.stat('/ligand.pdbqt');
+            postMessage({ type: 'log', message: `Files written. Receptor: ${rStat.size}b, Ligand: ${lStat.size}b` });
         } catch (err: any) {
             throw new Error(`Failed to write input files: ${err.message}`);
         }
@@ -91,52 +102,79 @@ self.onmessage = async (e: MessageEvent) => {
             '--size_z', String(params.size_z),
             '--exhaustiveness', String(params.exhaustiveness || 8),
             '--num_modes', String(params.num_modes || 9),
-            '--cpu', '1',
-            '--out', '/output.pdbqt'
+            '--cpu', '1', // Force single-threaded inside worker
+            '--out', outputFile
         ];
 
         if (params.seed) {
             args.push('--seed', String(params.seed));
         }
 
-        // 5. Run Docking
+        // 5. Run Docking with Timeout
         postMessage({ type: 'log', message: 'Starting Vina execution...' });
         const startTime = performance.now();
         console.log('[DockingWorker] Calling main with:', args);
 
+        // Setup timeout
+        const timeoutId = setTimeout(() => {
+            completionReject(new Error(`Vina calculation timeout after ${DOCKING_TIMEOUT_MS / 1000}s`));
+        }, DOCKING_TIMEOUT_MS);
+
         try {
             vinaMod.callMain(args);
         } catch (e: any) {
+            // Emscripten often throws ExitStatus on normal exit
             if (e instanceof vinaMod.ExitStatus || e.name === 'ExitStatus') {
                 console.log('[DockingWorker] Caught ExitStatus:', e.status);
             } else if (e.message && e.message.includes('unwind')) {
-                // ignore
+                // Ignore "unwind" pseudo-exceptions
             } else {
                 console.error("[DockingWorker] Vina Exception:", e);
+                clearTimeout(timeoutId);
+                throw e;
             }
         }
 
-        await completionPromise;
+        // Wait for completion (via onExit callback)
+        const exitCode = await completionPromise;
+        clearTimeout(timeoutId);
 
         const endTime = performance.now();
         const duration = (endTime - startTime) / 1000;
 
-        console.log(`[DockingWorker] Execution complete. Exit Code: ${exitCode}. Duration: ${duration.toFixed(2)}s`);
-        postMessage({ type: 'log', message: `Execution finished with Exit Code: ${exitCode}` });
+        console.log(`[DockingWorker] Execution complete. Exit: ${exitCode}. Duration: ${duration.toFixed(2)}s`);
+        postMessage({ type: 'log', message: `Vina finished (Exit ${exitCode}) in ${duration.toFixed(1)}s` });
 
-        // 6. Read Output
+        // 6. Read Output with verification
         let outputPdbqt = '';
         if (exitCode === 0) {
             try {
-                outputPdbqt = vinaMod.FS.readFile('/output.pdbqt', { encoding: 'utf8' });
-            } catch (e) {
-                throw new Error(`Docking finished (Exit 0) but output file not found. Check Console.`);
+                // Verify file exists
+                const outStat = vinaMod.FS.stat(outputFile);
+                if (outStat.size === 0) {
+                    throw new Error('Output file is empty');
+                }
+
+                outputPdbqt = vinaMod.FS.readFile(outputFile, { encoding: 'utf8' });
+                postMessage({ type: 'log', message: `Output read: ${outStat.size} bytes` });
+
+                // 7. Cleanup virtual FS
+                try {
+                    vinaMod.FS.unlink('/receptor.pdbqt');
+                    vinaMod.FS.unlink('/ligand.pdbqt');
+                    vinaMod.FS.unlink(outputFile);
+                } catch (cleanupErr) {
+                    console.warn('[DockingWorker] Cleanup warning:', cleanupErr);
+                }
+
+            } catch (e: any) {
+                throw new Error(`Docking finished (Exit 0) but output file error: ${e.message}`);
             }
         } else {
             throw new Error(`Vina exited with error code ${exitCode}. Check console for stderr.`);
         }
 
-        // 7. Send Results
+        // 8. Send Results
         postMessage({
             type: 'complete',
             output: outputPdbqt,
