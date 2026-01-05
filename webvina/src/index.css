@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* 
+    Apple-Grade Scientific Minimalism 
+    Default: DARK MODE (Deep Space Neutral)
+  */
+
+  /* CORE PALETTE - DARK */
+  --bg-canvas: #0E1116;
+  /* Deep Space Neutral - Main 3D Viewport */
+  --bg-surface: rgba(26, 31, 38, 0.85);
+  /* Graphite Glass - Panels */
+  --bg-highlight: #2A313B;
+  /* Frosted Slate - Hover/Active */
+  --bg-elevated: #363d4a;
+  /* Elevated Slate - Active Panels/Modals */
+
+  /* ACCENT COLORS - CONTROLLED */
+  --accent-primary: #4DA3FF;
+  /* Molecular Blue */
+  --accent-secondary: #3FE0C5;
+  /* Biotech Teal */
+  --status-warning: #FFB454;
+  /* Soft Amber */
+  --status-success: #3FE0C5;
+  /* Same as Teal */
+  --status-error: #FF6B6B;
+  /* Soft Red */
+
+  /* TEXTOGRAPHY */
+  --text-primary: #E6E8EB;
+  /* High Readability White */
+  --text-secondary: #9AA3AE;
+  /* Metadata Grey */
+  --text-disabled: #6B7280;
+  /* Disabled */
+
+  /* MOLECULAR COLORS (Muted/Emission) */
+  --mol-carbon: #C7CBD1;
+  --mol-oxygen: #FF6B6B;
+  --mol-nitrogen: #6BA8FF;
+  --mol-hydrogen: #E6E8EB;
+  --mol-sulfur: #FFD166;
+  --mol-phosphorus: #F28D35;
+
+  /* MATERIALS & SHADOWS (Apple Style) */
+  --glass-blur: blur(20px);
+  --border-subtle: 1px solid rgba(255, 255, 255, 0.08);
+  --border-divider: 1px solid rgba(255, 255, 255, 0.06);
+  --shadow-panel: 0px 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0px 16px 32px rgba(0, 0, 0, 0.45);
+  --radius-panel: 14px;
+  --radius-sm: 8px;
+
+  /* INTERACTION & OUTLINES */
+  --outline-selection: 2px solid var(--accent-primary);
+  --ring-focus: 0 0 0 3px rgba(77, 163, 255, 0.5);
+  /* Accent @ 50% */
+  --overlay-hover: rgba(255, 255, 255, 0.05);
+
+  /* TRANSITIONS */
+  --transition-slow: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-fast: 0.15s ease-out;
+}
+
+/* 
+  LIGHT MODE - MOLECULAR DOCKING 
+  (Soft Ceramic White)
+*/
+.light-mode {
+  /* CORE PALETTE - LIGHT */
+  --bg-canvas: #EEF1F5;
+  /* Cloud Gray - Main 3D Viewport */
+  --bg-surface: rgba(255, 255, 255, 0.9);
+  /* Frosted Paper - Panels */
+  --bg-highlight: #F3F4F6;
+  /* Pearl Gray - Hover/Active */
+  --bg-elevated: #FFFFFF;
+  /* Pure White - Active Panels */
+
+  /* ACCENT COLORS - LIGHT MODE TUNED */
+  --accent-primary: #3B82F6;
+  /* Molecular Blue (Slightly darker) */
+  --accent-secondary: #22C1A5;
+  /* Biotech Teal */
+  --status-warning: #F59E0B;
+  /* Amber */
+  --status-error: #EF4444;
+  /* Red */
+
+  /* TEXTOGRAPHY - LIGHT */
+  --text-primary: #111827;
+  /* Deep Charcoal */
+  --text-secondary: #4B5563;
+  /* Slate */
+  --text-disabled: #9CA3AF;
+  /* Light Gray */
+
+  /* MOLECULAR COLORS (Subtle Rim Lighting) */
+  --mol-carbon: #6B7280;
+  --mol-oxygen: #EF4444;
+  --mol-nitrogen: #2563EB;
+  --mol-hydrogen: #9CA3AF;
+  --mol-sulfur: #D97706;
+
+  /* MATERIALS - LIGHT */
+  --glass-blur: blur(24px);
+  --border-subtle: 1px solid rgba(0, 0, 0, 0.06);
+  --border-divider: 1px solid rgba(0, 0, 0, 0.06);
+  --shadow-panel: 0px 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0px 20px 40px rgba(0, 0, 0, 0.12);
+
+  /* INTERACTION - LIGHT */
+  --ring-focus: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  /* Accent @ 40% */
+  --overlay-hover: rgba(0, 0, 0, 0.03);
+}
+
+/* GLOBAL RESETS & BASE STYLES */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* SCROLLBARS (Mac Style) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(155, 155, 155, 0.3);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(155, 155, 155, 0.5);
+}
+
+/* SELECTION */
+::selection {
+  background: var(--accent-primary);
+  color: white;
+}

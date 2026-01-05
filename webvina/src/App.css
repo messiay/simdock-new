@@ -1,0 +1,70 @@
+.app.spatial-mode {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.global-viewer-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.ui-overlay-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  /* Let clicks pass through to 3D world */
+}
+
+/* Re-enable pointer events for actual UI elements */
+.sidebar,
+.draggable-panel,
+.prep-panel,
+.input-panel,
+.output-workspace-panel {
+  pointer-events: auto;
+}
+
+/* Sidebar Adjustment for Floating Layout */
+.sidebar {
+  height: 100vh;
+  /* Sidebar is docked */
+  width: 80px;
+  /* Slim dock */
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(13, 17, 23, 0.8);
+  backdrop-filter: blur(20px);
+}
+
+/* Ensure inner panels don't have conflicting container styles */
+.output-workspace-panel,
+.input-panel,
+.prep-panel {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix text colors for glass backgrounds */
+.app {
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
