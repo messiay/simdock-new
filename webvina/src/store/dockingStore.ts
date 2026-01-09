@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { DockingState, DockingParams, MoleculeFile, DockingResult, TabId } from '../core/types';
 
 const defaultParams: DockingParams = {
@@ -57,85 +58,111 @@ interface DockingStore extends DockingState {
     startOver: () => void;
 }
 
-export const useDockingStore = create<DockingStore>((set) => ({
-    // Initial state
-    receptorFile: null,
-    ligandFile: null,
-    correctPoseFile: null,
+export const useDockingStore = create<DockingStore>()(
+    persist(
+        (set) => ({
+            // Initial state
+            receptorFile: null,
+            ligandFile: null,
+            correctPoseFile: null,
 
-    params: { ...defaultParams },
+            params: { ...defaultParams },
 
-    isRunning: false,
-    progress: 0,
-    statusMessage: '',
-    consoleOutput: [],
+            isRunning: false,
+            progress: 0,
+            statusMessage: '',
+            consoleOutput: [],
 
-    result: null,
-    selectedPose: 0,
-    viewMode: 'cartoon',
-    resetViewTrigger: 0,
+            result: null,
+            selectedPose: 0,
+            viewMode: 'cartoon',
+            resetViewTrigger: 0,
 
-    activeTab: 'input',
+            activeTab: 'input',
 
-    // Visual Settings Defaults
-    showBox: true,
-    showGrid: true,
-    showAxes: true,
+            // Visual Settings Defaults
+            showBox: true,
+            showGrid: true,
+            showAxes: true,
 
-    // Actions
-    setReceptorFile: (file) => set({ receptorFile: file }),
-    setLigandFile: (file) => set({ ligandFile: file }),
-    setCorrectPoseFile: (file) => set({ correctPoseFile: file }),
+            // Actions
+            setReceptorFile: (file) => set({ receptorFile: file }),
+            setLigandFile: (file) => set({ ligandFile: file }),
+            setCorrectPoseFile: (file) => set({ correctPoseFile: file }),
 
-    setParams: (params) => set((state) => ({
-        params: { ...state.params, ...params }
-    })),
-    resetParams: () => set({ params: { ...defaultParams } }),
+            setParams: (params) => set((state) => ({
+                params: { ...state.params, ...params }
+            })),
+            resetParams: () => set({ params: { ...defaultParams } }),
 
-    toggleVisual: (visual) => set((state) => {
-        if (visual === 'grid') return { showGrid: !state.showGrid };
-        if (visual === 'axes') return { showAxes: !state.showAxes };
-        if (visual === 'box') return { showBox: !state.showBox };
-        return {};
-    }),
+            toggleVisual: (visual) => set((state) => {
+                if (visual === 'grid') return { showGrid: !state.showGrid };
+                if (visual === 'axes') return { showAxes: !state.showAxes };
+                if (visual === 'box') return { showBox: !state.showBox };
+                return {};
+            }),
 
-    setRunning: (isRunning) => set({ isRunning }),
-    setProgress: (progress) => set({ progress }),
-    setStatusMessage: (statusMessage) => set({ statusMessage }),
-    addConsoleOutput: (line) => set((state) => ({
-        consoleOutput: [...state.consoleOutput, line]
-    })),
-    clearConsoleOutput: () => set({ consoleOutput: [] }),
+            setRunning: (isRunning) => set({ isRunning }),
+            setProgress: (progress) => set({ progress }),
+            setStatusMessage: (statusMessage) => set({ statusMessage }),
+            addConsoleOutput: (line) => set((state) => ({
+                consoleOutput: [...state.consoleOutput, line]
+            })),
+            clearConsoleOutput: () => set({ consoleOutput: [] }),
 
-    setResult: (result) => set({ result }),
-    setSelectedPose: (selectedPose) => set({ selectedPose }),
+            setResult: (result) => {
+                console.info('[SimDock] setResult called with', result?.poses?.length ?? 0, 'poses');
+                set({ result });
+            },
+            setSelectedPose: (selectedPose) => set({ selectedPose }),
 
-    setActiveTab: (activeTab) => set({ activeTab }),
+            setActiveTab: (activeTab) => set({ activeTab }),
 
-    startOver: () => set({
-        receptorFile: null,
-        ligandFile: null,
-        correctPoseFile: null,
-        params: { ...defaultParams },
-        isRunning: false,
-        progress: 0,
-        statusMessage: '',
-        consoleOutput: [],
-        result: null,
-        selectedPose: 0,
-        activeTab: 'input',
-        viewMode: 'cartoon',
-        resetViewTrigger: 0,
-        showBox: true,
-        showGrid: true,
-        showAxes: true,
-    }),
+            startOver: () => set({
+                receptorFile: null,
+                ligandFile: null,
+                correctPoseFile: null,
+                params: { ...defaultParams },
+                isRunning: false,
+                progress: 0,
+                statusMessage: '',
+                consoleOutput: [],
+                result: null,
+                selectedPose: 0,
+                activeTab: 'input',
+                viewMode: 'cartoon',
+                resetViewTrigger: 0,
+                showBox: true,
+                showGrid: true,
+                showAxes: true,
+            }),
 
-    // View Actions
-    setViewMode: (mode) => set({ viewMode: mode }),
-    triggerResetView: () => set((state) => ({ resetViewTrigger: state.resetViewTrigger + 1 })),
+            // View Actions
+            setViewMode: (mode) => set({ viewMode: mode }),
+            triggerResetView: () => set((state) => ({ resetViewTrigger: state.resetViewTrigger + 1 })),
 
-    // Theme State
-    theme: 'dark',
-    toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
-}));
+            // Theme State
+            theme: 'dark',
+            toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+        }),
+        {
+            name: 'simdock-docking-state',
+            // Exclude transient state from persistence
+            partialize: (state) => ({
+                receptorFile: state.receptorFile,
+                ligandFile: state.ligandFile,
+                correctPoseFile: state.correctPoseFile,
+                params: state.params,
+                result: state.result,
+                selectedPose: state.selectedPose,
+                viewMode: state.viewMode,
+                activeTab: state.activeTab,
+                showBox: state.showBox,
+                showGrid: state.showGrid,
+                showAxes: state.showAxes,
+                theme: state.theme,
+            }),
+        }
+    )
+);
+

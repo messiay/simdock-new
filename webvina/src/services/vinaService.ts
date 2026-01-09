@@ -1,5 +1,5 @@
 import type { DockingParams, DockingResult } from '../types';
-import { parseVinaOutput } from '../utils/vinaOutputParser';
+import { parseVinaOutput } from '../core/utils/vinaOutputParser';
 
 // Worker message types
 export interface DockingRequest {

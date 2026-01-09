@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useDockingStore } from '../../store/dockingStore';
-import { parseVinaOutput } from '../../utils/vinaOutputParser';
+import { parseVinaOutput } from '../../core/utils/vinaOutputParser';
 import { FileUpload } from './FileUpload';
 import { Lightbulb, FolderOpen } from 'lucide-react';
 import '../styles/ExistingOutputPanel.css';

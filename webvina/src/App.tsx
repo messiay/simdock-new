@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useDockingStore } from './store/dockingStore';
-import { useUserStore } from './store/userStore';
 import { Sidebar } from './ui/components/Sidebar';
 import { PrepPanel } from './ui/components/PrepPanel';
 import { InputPanel } from './ui/components/InputPanel';
@@ -8,7 +7,6 @@ import { ExistingOutputPanel } from './ui/components/ExistingOutputPanel';
 import { RunningPanel } from './ui/components/RunningPanel';
 import { OutputPanel } from './ui/components/OutputPanel';
 import { ProjectPanel } from './ui/components/ProjectPanel';
-import { LoginScreen } from './ui/components/LoginScreen';
 import { MoleculeViewer } from './ui/components/MoleculeViewer';
 import { DraggablePanel } from './ui/components/DraggablePanel';
 import { FloatingToolbar } from './ui/components/FloatingToolbar'; // Keep toolbar
@@ -16,7 +14,6 @@ import './App.css';
 
 function App() {
   const { activeTab, theme } = useDockingStore();
-  const { currentUser } = useUserStore();
 
   // Sync theme to body class for global CSS variables
   useEffect(() => {
@@ -27,9 +24,6 @@ function App() {
     }
   }, [theme]);
 
-  if (!currentUser) {
-    return <LoginScreen />;
-  }
 
   const renderActivePanel = () => {
     switch (activeTab) {

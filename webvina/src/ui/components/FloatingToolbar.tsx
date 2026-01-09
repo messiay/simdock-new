@@ -14,7 +14,7 @@ export function FloatingToolbar() {
     const [missionName, setMissionName] = useState('');
 
     const handleSaveClick = () => {
-        if (!currentUser) return;
+        // Removed login check
         if (!receptorFile && !ligandFile) {
             alert('Nothing to save! Import molecules first.');
             return;
@@ -26,11 +26,13 @@ export function FloatingToolbar() {
     const confirmSave = async () => {
         if (!missionName) return;
 
+        console.info('[SimDock] Attempting to save mission:', missionName);
+
         try {
             await projectService.saveProject({
                 id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
                 name: missionName,
-                username: currentUser!,
+                username: currentUser || 'Local Researcher',
                 timestamp: Date.now(),
                 data: {
                     receptorFile,
@@ -41,9 +43,10 @@ export function FloatingToolbar() {
                 }
             });
             setShowSaveModal(false);
+            console.info('[SimDock] Mission saved successfully!');
             alert('Mission saved successfully!');
         } catch (e) {
-            console.error(e);
+            console.error('[SimDock] Save failed:', e);
             alert('Failed to save mission.');
         }
     };

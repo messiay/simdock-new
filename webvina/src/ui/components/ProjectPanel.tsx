@@ -13,16 +13,14 @@ export function ProjectPanel() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (currentUser) {
-            loadProjects();
-        }
+        loadProjects();
     }, [currentUser]);
 
     const loadProjects = async () => {
-        if (!currentUser) return;
+        const username = currentUser || 'Local Researcher';
         setIsLoading(true);
         try {
-            const list = await projectService.getProjects(currentUser);
+            const list = await projectService.getProjects(username);
             setProjects(list);
         } catch (error) {
             console.error('Failed to load projects', error);
@@ -57,8 +55,6 @@ export function ProjectPanel() {
             setActiveTab(targetTab);
         }
     };
-
-    if (!currentUser) return <div className="project-panel-empty">Please log in to view projects.</div>;
 
     return (
         <div className="project-panel">
