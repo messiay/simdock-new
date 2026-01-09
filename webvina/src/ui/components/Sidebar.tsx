@@ -1,0 +1,81 @@
+import { useDockingStore } from '../../store/dockingStore';
+import type { TabId } from '../../core/types';
+import {
+    Atom,
+    TestTube2,
+    ClipboardList,
+    FolderOpen,
+    PlayCircle,
+    BarChart3,
+    Sun,
+    Moon,
+    RotateCcw,
+    Database
+} from 'lucide-react';
+import '../styles/Sidebar.css';
+
+interface TabConfig {
+    id: TabId;
+    label: string;
+    icon: React.ReactNode;
+    disabled?: () => boolean;
+}
+
+export function Sidebar() {
+    const { activeTab, setActiveTab, isRunning, result, startOver, theme, toggleTheme } = useDockingStore();
+
+    const tabs: TabConfig[] = [
+        { id: 'prep', label: 'Molecule Import', icon: <TestTube2 size={20} /> },
+        { id: 'input', label: 'Input Parameters', icon: <ClipboardList size={20} /> },
+        { id: 'existing', label: 'Existing Output', icon: <FolderOpen size={20} /> },
+        { id: 'running', label: 'Running Docking', icon: <PlayCircle size={20} />, disabled: () => !isRunning },
+        { id: 'output', label: 'Output', icon: <BarChart3 size={20} />, disabled: () => !result },
+        { id: 'projects', label: 'Mission Log', icon: <Database size={20} /> },
+    ];
+
+    return (
+        <aside className="sidebar">
+            <div className="sidebar-header">
+                <h1 className="app-logo">
+                    <span className="logo-icon"><Atom size={32} /></span>
+                    <span className="logo-text">SimDock</span>
+                </h1>
+                <p className="app-subtitle">Browser-Based Molecular Docking</p>
+            </div>
+
+            <nav className="sidebar-nav">
+                {tabs.map((tab) => {
+                    const isDisabled = tab.disabled?.() ?? false;
+                    const isActive = activeTab === tab.id;
+
+                    return (
+                        <button
+                            key={tab.id}
+                            className={`nav-tab ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                            onClick={() => !isDisabled && setActiveTab(tab.id)}
+                            disabled={isDisabled}
+                        >
+                            <span className="tab-icon">{tab.icon}</span>
+                            <span className="tab-label">{tab.label}</span>
+                            {isActive && <span className="tab-indicator" />}
+                        </button>
+                    );
+                })}
+            </nav>
+
+            <div className="sidebar-footer">
+                <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
+                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+                <div className="spacer" style={{ height: '10px' }} />
+                <button className="start-over-btn" onClick={startOver}>
+                    <RotateCcw size={16} style={{ marginRight: '8px' }} /> Start Over
+                </button>
+                <div className="footer-info">
+                    <p>Powered by AutoDock Vina</p>
+                    <p>WebAssembly Edition</p>
+                </div>
+            </div>
+        </aside>
+    );
+}

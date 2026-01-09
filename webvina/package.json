@@ -14,6 +14,8 @@
     "@types/file-saver": "^2.0.7",
     "3dmol": "^2.5.3",
     "file-saver": "^2.0.5",
+    "idb": "^8.0.3",
+    "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.9"

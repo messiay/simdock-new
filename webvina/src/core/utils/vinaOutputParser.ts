@@ -65,53 +65,42 @@ export function splitPdbqtPoses(pdbqtContent: string): string[] {
     const lines = pdbqtContent.split('\n');
     let currentPose: string[] = [];
     let insideModel = false;
-    let hasAtoms = false;
 
     for (const line of lines) {
         if (line.startsWith('MODEL')) {
-            if (currentPose.length > 0 && hasAtoms) {
+            if (currentPose.length > 0 && !insideModel) {
+                // We found a new MODEL start but we had some previous content.
+                // This shouldn't happen in standard PDBQT but safekeeping.
                 poses.push(currentPose.join('\n'));
-            } else if (currentPose.length > 0 && !hasAtoms && !insideModel) {
-                // Case: Content before first MODEL (preamble), ignore unless it creates a pose
+                currentPose = [];
             }
-
-            currentPose = [];
             insideModel = true;
-            hasAtoms = false;
             currentPose.push(line);
         } else if (line.startsWith('ENDMDL')) {
             currentPose.push(line);
-            if (hasAtoms || currentPose.length > 2) { // Minimal pose content
-                poses.push(currentPose.join('\n'));
-            }
+            poses.push(currentPose.join('\n'));
             currentPose = [];
             insideModel = false;
-            hasAtoms = false;
         } else {
-            // Check for atoms
-            if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
-                hasAtoms = true;
-            }
-
+            // If we are inside a model, add lines.
+            // If we are NOT inside a model, we might be in header/footer or a file without MODEL tags.
+            // For safety, if we aren't "insideModel" yet, we just accumulate.
+            // But if we encounter MODEL later, we might need to discard previous?
+            // Vina output usually starts with MODEL 1 immediately after header.
+            // We'll accumulate everything. If we hit MODEL later, we might treat previous as "preamble" which we probably don't need for individual poses?
+            // Actually, best strategy: if we see MODEL, we start fresh.
             if (insideModel) {
                 currentPose.push(line);
-            } else if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
-                // If we find atoms OUTSIDE a model block, we might be in a single-model file w/o tags
-                // Force entry into "implicit model" mode
-                insideModel = true; // Treat as if we are inside
-                hasAtoms = true;
-                currentPose.push(line);
+            } else if (line.trim().length > 0) {
+                // lines outside MODEL blocks (remarks etc). We can ignore or keep.
+                // For Vina split, we really just want the ATOM lines within models.
+                // But if there are NO model tags, we want everything.
             }
         }
     }
 
-    // Handle trailing content
-    if (currentPose.length > 0 && (hasAtoms || poses.length === 0)) {
-        poses.push(currentPose.join('\n'));
-    }
-
-    // Fallback: If no poses found but content exists, treat entire content as one pose
-    if (poses.length === 0 && pdbqtContent.trim().length > 0) {
+    // If we never found MODEL tags, treat the whole file as one pose
+    if (poses.length === 0 && pdbqtContent.trim()) {
         poses.push(pdbqtContent);
     }
 

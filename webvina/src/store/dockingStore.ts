@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DockingState, DockingParams, MoleculeFile, DockingResult, TabId } from '../types';
+import type { DockingState, DockingParams, MoleculeFile, DockingResult, TabId } from '../core/types';
 
 const defaultParams: DockingParams = {
     centerX: 0,
@@ -35,10 +35,10 @@ interface DockingStore extends DockingState {
     toggleTheme: () => void;
 
     // Visual Settings
+    showBox: boolean;
     showGrid: boolean;
     showAxes: boolean;
-    showBox: boolean;
-    toggleVisual: (setting: 'grid' | 'axes' | 'box') => void;
+    toggleVisual: (visual: 'grid' | 'axes' | 'box') => void;
 
     setParams: (params: Partial<DockingParams>) => void;
     resetParams: () => void;
@@ -78,9 +78,9 @@ export const useDockingStore = create<DockingStore>((set) => ({
     activeTab: 'input',
 
     // Visual Settings Defaults
-    showGrid: false,
-    showAxes: false,
-    showBox: true, // Default to true for docking context
+    showBox: true,
+    showGrid: true,
+    showAxes: true,
 
     // Actions
     setReceptorFile: (file) => set({ receptorFile: file }),
@@ -91,6 +91,13 @@ export const useDockingStore = create<DockingStore>((set) => ({
         params: { ...state.params, ...params }
     })),
     resetParams: () => set({ params: { ...defaultParams } }),
+
+    toggleVisual: (visual) => set((state) => {
+        if (visual === 'grid') return { showGrid: !state.showGrid };
+        if (visual === 'axes') return { showAxes: !state.showAxes };
+        if (visual === 'box') return { showBox: !state.showBox };
+        return {};
+    }),
 
     setRunning: (isRunning) => set({ isRunning }),
     setProgress: (progress) => set({ progress }),
@@ -119,21 +126,14 @@ export const useDockingStore = create<DockingStore>((set) => ({
         activeTab: 'input',
         viewMode: 'cartoon',
         resetViewTrigger: 0,
-        showGrid: false,
-        showAxes: false,
         showBox: true,
+        showGrid: true,
+        showAxes: true,
     }),
 
     // View Actions
     setViewMode: (mode) => set({ viewMode: mode }),
     triggerResetView: () => set((state) => ({ resetViewTrigger: state.resetViewTrigger + 1 })),
-
-    toggleVisual: (setting) => set((state) => {
-        if (setting === 'grid') return { showGrid: !state.showGrid };
-        if (setting === 'axes') return { showAxes: !state.showAxes };
-        if (setting === 'box') return { showBox: !state.showBox };
-        return {};
-    }),
 
     // Theme State
     theme: 'dark',

@@ -69,7 +69,7 @@ class VinaService {
         return new Promise((resolve, reject) => {
             // Create a new worker for this docking run
             this.worker = new Worker(
-                new URL('../core/workers/dockingWorker.ts', import.meta.url),
+                new URL('../workers/dockingWorker.ts', import.meta.url),
                 { type: 'module' }
             );
 

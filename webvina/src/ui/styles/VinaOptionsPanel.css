@@ -1,0 +1,99 @@
+.vina-options-panel {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.option-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.option-item label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.option-item input {
+    padding: 12px;
+    border: 2px solid #e8e8e8;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: #1a1a2e;
+    transition: all 0.2s ease;
+}
+
+.option-item input:focus {
+    outline: none;
+    border-color: #0096ff;
+    box-shadow: 0 0 0 4px rgba(0, 150, 255, 0.1);
+}
+
+.option-hint {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.collapsible-section {
+    border-top: 1px solid #eee;
+    margin-top: 16px;
+    padding-top: 12px;
+}
+
+.section-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0096ff;
+    cursor: pointer;
+}
+
+.section-toggle:hover {
+    color: #0077cc;
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+}
+
+.section-content {
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #0096ff;
+    cursor: pointer;
+}
+
+.checkbox-option label {
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+}

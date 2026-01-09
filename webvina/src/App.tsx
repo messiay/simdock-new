@@ -1,18 +1,22 @@
-import { useEffect } from 'react'; // Added useEffect
+import { useEffect } from 'react';
 import { useDockingStore } from './store/dockingStore';
-import { Sidebar } from './components/Sidebar';
-import { PrepPanel } from './components/PrepPanel';
-import { InputPanel } from './components/InputPanel';
-import { ExistingOutputPanel } from './components/ExistingOutputPanel';
-import { RunningPanel } from './components/RunningPanel';
-import { OutputPanel } from './components/OutputPanel';
-import { MoleculeViewer } from './components/MoleculeViewer';
-import { DraggablePanel } from './components/DraggablePanel';
-import { FloatingToolbar } from './components/FloatingToolbar'; // Added this
+import { useUserStore } from './store/userStore';
+import { Sidebar } from './ui/components/Sidebar';
+import { PrepPanel } from './ui/components/PrepPanel';
+import { InputPanel } from './ui/components/InputPanel';
+import { ExistingOutputPanel } from './ui/components/ExistingOutputPanel';
+import { RunningPanel } from './ui/components/RunningPanel';
+import { OutputPanel } from './ui/components/OutputPanel';
+import { ProjectPanel } from './ui/components/ProjectPanel';
+import { LoginScreen } from './ui/components/LoginScreen';
+import { MoleculeViewer } from './ui/components/MoleculeViewer';
+import { DraggablePanel } from './ui/components/DraggablePanel';
+import { FloatingToolbar } from './ui/components/FloatingToolbar'; // Keep toolbar
 import './App.css';
 
 function App() {
   const { activeTab, theme } = useDockingStore();
+  const { currentUser } = useUserStore();
 
   // Sync theme to body class for global CSS variables
   useEffect(() => {
@@ -23,9 +27,9 @@ function App() {
     }
   }, [theme]);
 
-  // State to track closed panels (to allow re-opening from sidebar)
-  // In this simple version, activeTab controls the SINGLE floating panel.
-  // Advanced version could allow multiple. Let's stick to "One Active Tool".
+  if (!currentUser) {
+    return <LoginScreen />;
+  }
 
   const renderActivePanel = () => {
     switch (activeTab) {
@@ -59,6 +63,12 @@ function App() {
             <OutputPanel />
           </DraggablePanel>
         );
+      case 'projects':
+        return (
+          <DraggablePanel title="Mission Log" width="400px" initialX={60} initialY={80}>
+            <ProjectPanel />
+          </DraggablePanel>
+        );
       default:
         return null;
     }
@@ -74,11 +84,7 @@ function App() {
       {/* LAYER 1: UI OVERLAY */}
       <div className="ui-overlay-layer">
         <Sidebar />
-
-        {/* Floating Controls */}
         <FloatingToolbar />
-
-        {/* Floating Tool Panel */}
         {renderActivePanel()}
       </div>
     </div>

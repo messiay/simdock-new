@@ -1,0 +1,129 @@
+.molecular-properties {
+    background: rgba(26, 26, 46, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(47, 172, 178, 0.2);
+}
+
+.properties-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.properties-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2FACB2;
+}
+
+.drug-likeness-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-pass {
+    background: rgba(47, 172, 178, 0.2);
+    color: #2FACB2;
+    border: 1px solid rgba(47, 172, 178, 0.4);
+}
+
+.status-warning {
+    background: rgba(255, 204, 0, 0.2);
+    color: #ffcc00;
+    border: 1px solid rgba(255, 204, 0, 0.4);
+}
+
+.status-fail {
+    background: rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.property-item {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.property-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.property-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2FACB2;
+}
+
+.property-unit {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.lipinski-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.lipinski-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.lipinski-rules {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.rule.pass {
+    background: rgba(47, 172, 178, 0.1);
+    color: #2FACB2;
+}
+
+.rule.fail {
+    background: rgba(255, 107, 107, 0.1);
+    color: #ff6b6b;
+}
+
+.rule-icon {
+    font-weight: bold;
+}
+
+.violations-count {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}

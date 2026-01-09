@@ -1,134 +1,219 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   🌗 GLOBAL THEME SYSTEM - Mission Control Matte
+   Default: DARK MODE (Matte Navy/Slate)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* 
-    Apple-Grade Scientific Minimalism 
-    Default: DARK MODE (Deep Space Neutral)
-  */
+  /* ─────────────────────────────────────────────────────────────────────────
+     background & CANVAS (Mission Control - Matte Dark)
+     ───────────────────────────────────────────────────────────────────────── */
+  --bg-canvas: #0B0E14;
+  /* Deep matte navy/black */
+  --bg-viewport: #0F1218;
+  /* Slightly lighter deep space */
+  --bg-surface: #151921;
+  /* SOLID Matte Slate - NO GLASS */
+  --bg-surface-secondary: #0B0E14;
+  /* Inset/Darker areas */
+  --bg-highlight: #1E232F;
+  /* Hover state */
+  --bg-elevated: #1C212B;
+  /* Popups/Dropdowns */
+  --bg-modal: #151921;
+  /* Solid Modal */
 
-  /* CORE PALETTE - DARK */
-  --bg-canvas: #0E1116;
-  /* Deep Space Neutral - Main 3D Viewport */
-  --bg-surface: rgba(26, 31, 38, 0.85);
-  /* Graphite Glass - Panels */
-  --bg-highlight: #2A313B;
-  /* Frosted Slate - Hover/Active */
-  --bg-elevated: #363d4a;
-  /* Elevated Slate - Active Panels/Modals */
+  /* ─────────────────────────────────────────────────────────────────────────
+     ACCENT COLORS — MUTED TEAL (No Electric Blue)
+     ───────────────────────────────────────────────────────────────────────── */
+  --accent-primary: #2FACB2;
+  /* Muted Cyan/Teal from reference */
+  --accent-secondary: #248A8E;
+  /* Darker Teal */
+  --accent-hover: #4FD1D9;
+  /* Lighter Teal */
 
-  /* ACCENT COLORS - CONTROLLED */
-  --accent-primary: #4DA3FF;
-  /* Molecular Blue */
-  --accent-secondary: #3FE0C5;
-  /* Biotech Teal */
-  --status-warning: #FFB454;
-  /* Soft Amber */
-  --status-success: #3FE0C5;
-  /* Same as Teal */
-  --status-error: #FF6B6B;
-  /* Soft Red */
+  --status-warning: #D9A54C;
+  /* Muted Gold */
+  --status-success: #2FACB2;
+  /* Use Teal for success */
+  --status-error: #E05D5D;
+  /* Muted Red */
 
-  /* TEXTOGRAPHY */
-  --text-primary: #E6E8EB;
-  /* High Readability White */
-  --text-secondary: #9AA3AE;
-  /* Metadata Grey */
-  --text-disabled: #6B7280;
-  /* Disabled */
+  /* ─────────────────────────────────────────────────────────────────────────
+     TEXT HIERARCHY
+     ───────────────────────────────────────────────────────────────────────── */
+  --text-primary: #FFFFFF;
+  /* Pure White */
+  --text-secondary: #8A94A6;
+  /* Cool Blue-Gray */
+  --text-disabled: #4B5563;
+  --text-metadata: #5C6575;
+  --text-muted: #6B7589;
+  --text-mono: #A0AABF;
 
-  /* MOLECULAR COLORS (Muted/Emission) */
-  --mol-carbon: #C7CBD1;
-  --mol-oxygen: #FF6B6B;
-  --mol-nitrogen: #6BA8FF;
-  --mol-hydrogen: #E6E8EB;
-  --mol-sulfur: #FFD166;
-  --mol-phosphorus: #F28D35;
+  /* ─────────────────────────────────────────────────────────────────────────
+     MOLECULAR COLORS (Muted)
+     ───────────────────────────────────────────────────────────────────────── */
+  --mol-carbon: #C0C4CC;
+  --mol-oxygen: #E05D5D;
+  --mol-nitrogen: #5C9CE6;
+  /* Muted Blue (Science only) */
+  --mol-hydrogen: #FFFFFF;
+  --mol-bond-default: #4B5563;
+  --mol-bond-highlight: #2FACB2;
+  /* Teal highlight */
+  --mol-selection-glow: rgba(47, 172, 178, 0.4);
+  /* Teal glow */
+  --mol-docking-ghost: rgba(47, 172, 178, 0.2);
 
-  /* MATERIALS & SHADOWS (Apple Style) */
-  --glass-blur: blur(20px);
-  --border-subtle: 1px solid rgba(255, 255, 255, 0.08);
-  --border-divider: 1px solid rgba(255, 255, 255, 0.06);
-  --shadow-panel: 0px 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-elevated: 0px 16px 32px rgba(0, 0, 0, 0.45);
-  --radius-panel: 14px;
+  /* ─────────────────────────────────────────────────────────────────────────
+     3D VIEWPORT ELEMENTS
+     ───────────────────────────────────────────────────────────────────────── */
+  --grid-line: rgba(255, 255, 255, 0.04);
+  --axis-x: #E05D5D;
+  --axis-y: #2FACB2;
+  /* Teal Y */
+  --axis-z: #4B5563;
+  /* Gray Z */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     MATERIALS & SHADOWS (Flat Matte)
+     ───────────────────────────────────────────────────────────────────────── */
+  --glass-blur: none;
+  /* NO BLUR */
+  --border-subtle: 1px solid #1E232F;
+  /* Very subtle border */
+  --border-divider: 1px solid #1E232F;
+  --shadow-panel: 0px 4px 20px rgba(0, 0, 0, 0.4);
+  /* soft deep shadow */
+  --shadow-elevated: 0px 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-glow: none;
+  /* No neon glow */
+
+  --radius-panel: 20px;
+  /* Large rounded corners from ref */
   --radius-sm: 8px;
+  --radius-full: 9999px;
 
-  /* INTERACTION & OUTLINES */
+  /* ─────────────────────────────────────────────────────────────────────────
+     INTERACTION STATES
+     ───────────────────────────────────────────────────────────────────────── */
   --outline-selection: 2px solid var(--accent-primary);
-  --ring-focus: 0 0 0 3px rgba(77, 163, 255, 0.5);
-  /* Accent @ 50% */
-  --overlay-hover: rgba(255, 255, 255, 0.05);
+  --ring-focus: 0 0 0 2px rgba(47, 172, 178, 0.3);
+  --overlay-hover: rgba(255, 255, 255, 0.03);
+  --overlay-active: rgba(47, 172, 178, 0.1);
+  --state-disabled-opacity: 0.5;
 
-  /* TRANSITIONS */
-  --transition-slow: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  --transition-fast: 0.15s ease-out;
+  /* ─────────────────────────────────────────────────────────────────────────
+     TRANSITIONS
+     ───────────────────────────────────────────────────────────────────────── */
+  --transition-theme: none;
+  /* Instant or very fast */
+  --transition-slow: 0.2s ease;
+  --transition-fast: 0.1s ease;
 }
 
-/* 
-  LIGHT MODE - MOLECULAR DOCKING 
-  (Soft Ceramic White)
-*/
 .light-mode {
-  /* CORE PALETTE - LIGHT */
-  --bg-canvas: #EEF1F5;
-  /* Cloud Gray - Main 3D Viewport */
-  --bg-surface: rgba(255, 255, 255, 0.9);
-  /* Frosted Paper - Panels */
-  --bg-highlight: #F3F4F6;
-  /* Pearl Gray - Hover/Active */
+  /* ─────────────────────────────────────────────────────────────────────────
+     BACKGROUND & CANVAS (Light Mode Matte)
+     ───────────────────────────────────────────────────────────────────────── */
+  --bg-canvas: #F3F6F8;
+  /* Soft gray-blue white */
+  --bg-viewport: #E8EAED;
+  /* Cloud gray */
+  --bg-surface: #FFFFFF;
+  /* Pure White Matte */
+  --bg-surface-secondary: #F8F9FA;
+  --bg-highlight: #F1F2F4;
   --bg-elevated: #FFFFFF;
-  /* Pure White - Active Panels */
+  --bg-modal: #FFFFFF;
 
-  /* ACCENT COLORS - LIGHT MODE TUNED */
-  --accent-primary: #3B82F6;
-  /* Molecular Blue (Slightly darker) */
-  --accent-secondary: #22C1A5;
-  /* Biotech Teal */
-  --status-warning: #F59E0B;
-  /* Amber */
-  --status-error: #EF4444;
-  /* Red */
+  /* ─────────────────────────────────────────────────────────────────────────
+     TEXT HIERARCHY (Light Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --text-primary: #1A1F2E;
+  /* Dark Slate (not black) */
+  --text-secondary: #64748B;
+  /* Slate Gray */
+  --text-disabled: #94A3B8;
+  --text-metadata: #475569;
+  --text-mono: #334155;
 
-  /* TEXTOGRAPHY - LIGHT */
-  --text-primary: #111827;
-  /* Deep Charcoal */
-  --text-secondary: #4B5563;
-  /* Slate */
-  --text-disabled: #9CA3AF;
-  /* Light Gray */
+  /* ─────────────────────────────────────────────────────────────────────────
+     MOLECULAR VISUALIZATION (Light Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --mol-carbon: #5C6575;
+  --mol-oxygen: #E05D5D;
+  --mol-nitrogen: #3B82F6;
+  /* Standard Blue */
+  --mol-hydrogen: #CBD5E1;
+  --mol-bond-default: #94A3B8;
+  --mol-bond-highlight: #2FACB2;
+  --mol-selection-glow: rgba(47, 172, 178, 0.4);
+  --mol-docking-ghost: rgba(47, 172, 178, 0.2);
 
-  /* MOLECULAR COLORS (Subtle Rim Lighting) */
-  --mol-carbon: #6B7280;
-  --mol-oxygen: #EF4444;
-  --mol-nitrogen: #2563EB;
-  --mol-hydrogen: #9CA3AF;
-  --mol-sulfur: #D97706;
+  /* ─────────────────────────────────────────────────────────────────────────
+     3D VIEWPORT ELEMENTS (Light Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --grid-line: rgba(0, 0, 0, 0.05);
+  --gizmo-bg: #FFFFFF;
+  --measurement-line: #D9A54C;
+  --measurement-text: #B45309;
 
-  /* MATERIALS - LIGHT */
-  --glass-blur: blur(24px);
-  --border-subtle: 1px solid rgba(0, 0, 0, 0.06);
-  --border-divider: 1px solid rgba(0, 0, 0, 0.06);
-  --shadow-panel: 0px 10px 30px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0px 20px 40px rgba(0, 0, 0, 0.12);
+  /* ─────────────────────────────────────────────────────────────────────────
+     MATERIALS & SHADOWS (Light Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --glass-blur: none;
+  /* NO BLUR */
+  --border-subtle: 1px solid #E2E8F0;
+  --border-divider: 1px solid #E2E8F0;
+  --shadow-panel: 0px 4px 12px rgba(148, 163, 184, 0.15);
+  /* Soft slate shadow */
+  --shadow-elevated: 0px 8px 24px rgba(148, 163, 184, 0.2);
+  --shadow-glow: none;
 
-  /* INTERACTION - LIGHT */
-  --ring-focus: 0 0 0 3px rgba(59, 130, 246, 0.4);
-  /* Accent @ 40% */
+  /* ─────────────────────────────────────────────────────────────────────────
+     INTERACTION STATES (Light Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --ring-focus: 0 0 0 2px rgba(47, 172, 178, 0.3);
   --overlay-hover: rgba(0, 0, 0, 0.03);
+  --overlay-active: rgba(47, 172, 178, 0.1);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     DEPTH & LIGHTING
+     ───────────────────────────────────────────────────────────────────────── */
+  --scene-lighting: #F5F5F0;
+  --bloom-intensity: 0;
+  --ao-strength: 0.3;
 }
 
-/* GLOBAL RESETS & BASE STYLES */
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL RESETS & BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-canvas);
   color: var(--text-primary);
-  transition: background-color var(--transition-slow), color var(--transition-slow);
+  transition:
+    background-color var(--transition-theme),
+    color var(--transition-theme);
 }
 
-/* SCROLLBARS (Mac Style) */
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBARS (Mac Style - Theme Aware)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -139,18 +224,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(155, 155, 155, 0.3);
-  border-radius: 99px;
+  background: var(--text-disabled);
+  border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(155, 155, 155, 0.5);
-}
-
-/* SELECTION */
-::selection {
-  background: var(--accent-primary);
-  color: white;
+  background-color: var(--text-secondary);
 }

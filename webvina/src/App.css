@@ -1,9 +1,14 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   APP.CSS - Spatial Mode Layout with Theme Support
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .app.spatial-mode {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #000;
+  background: var(--bg-viewport);
+  transition: background-color var(--transition-theme);
 }
 
 .global-viewer-layer {
@@ -13,6 +18,8 @@
   width: 100%;
   height: 100%;
   z-index: 0;
+  background: var(--bg-viewport);
+  transition: background-color var(--transition-theme);
 }
 
 .ui-overlay-layer {
@@ -31,19 +38,22 @@
 .draggable-panel,
 .prep-panel,
 .input-panel,
-.output-workspace-panel {
+.output-workspace-panel,
+.floating-toolbar {
   pointer-events: auto;
 }
 
 /* Sidebar Adjustment for Floating Layout */
 .sidebar {
   height: 100vh;
-  /* Sidebar is docked */
   width: 80px;
-  /* Slim dock */
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(13, 17, 23, 0.8);
-  backdrop-filter: blur(20px);
+  border-right: var(--border-subtle);
+  background: var(--bg-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition:
+    background-color var(--transition-theme),
+    border-color var(--transition-theme);
 }
 
 /* Ensure inner panels don't have conflicting container styles */
@@ -63,8 +73,9 @@
   flex-direction: column;
 }
 
-/* Fix text colors for glass backgrounds */
+/* Base text color - Theme aware */
 .app {
-  color: #fff;
+  color: var(--text-primary);
   font-family: 'Inter', system-ui, sans-serif;
+  transition: color var(--transition-theme);
 }

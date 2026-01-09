@@ -1,0 +1,74 @@
+.existing-output-panel {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px;
+}
+
+.panel-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.panel-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 1.5rem;
+    color: #1a1a2e;
+}
+
+.panel-header p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.upload-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    margin-bottom: 32px;
+}
+
+.upload-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.upload-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: #1a1a2e;
+}
+
+.section-hint {
+    margin: 0 0 16px 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.info-box {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(47, 172, 178, 0.05) 0%, rgba(47, 172, 178, 0.05) 100%);
+    border: 1px solid rgba(47, 172, 178, 0.2);
+    border-radius: 16px;
+}
+
+.info-icon {
+    font-size: 1.8rem;
+}
+
+.info-content h4 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    color: #1a1a2e;
+}
+
+.info-content p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+}

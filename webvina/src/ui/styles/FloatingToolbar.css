@@ -1,0 +1,150 @@
+.floating-toolbar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 30, 40, 0.8);
+    backdrop-filter: blur(12px);
+    padding: 8px 16px;
+    border-radius: 16px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    pointer-events: auto;
+    transition: all 0.3s ease;
+}
+
+.floating-toolbar:hover {
+    background: rgba(30, 30, 40, 0.95);
+    border-color: rgba(47, 172, 178, 0.3);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 4px;
+}
+
+.divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: transparent;
+    border: none;
+    color: #a0a0a0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 60px;
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.tool-btn.active {
+    background: rgba(47, 172, 178, 0.15);
+    color: #2facb2;
+}
+
+.tool-btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-btn .label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Save Modal */
+.save-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+.save-modal {
+    background: #1e1e24;
+    border: 1px solid #2facb2;
+    padding: 24px;
+    border-radius: 16px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.save-modal h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.save-modal input {
+    background: #111;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    outline: none;
+}
+
+.save-modal input:focus {
+    border-color: #2facb2;
+}
+
+.save-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.save-modal-actions button {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.save-modal-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.save-modal-actions button.confirm-btn {
+    background: #2facb2;
+    color: #000;
+    font-weight: bold;
+}
+
+.save-modal-actions button.confirm-btn:hover {
+    background: #3fdfe5;
+}

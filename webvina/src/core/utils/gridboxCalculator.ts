@@ -105,7 +105,7 @@ export function calculateGridbox(ligandPdbqt: string, padding: number = 5): {
 export function calculateGridboxFromReceptor(
     receptorPdbqt: string,
     ligandPdbqt?: string,
-    padding: number = 3
+    padding: number = 10
 ): {
     centerX: number;
     centerY: number;
@@ -149,7 +149,7 @@ export function calculateGridboxFromReceptor(
  * BLIND DOCKING: Calculate gridbox covering the entire receptor
  * Searches the whole protein surface for binding sites
  */
-export function calculateBlindDockingBox(receptorPdbqt: string, padding: number = 4): {
+export function calculateBlindDockingBox(receptorPdbqt: string, padding: number = 10): {
     centerX: number;
     centerY: number;
     centerZ: number;
