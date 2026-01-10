@@ -83,51 +83,82 @@ class OpenBabelService {
     }
 
     private async doInit(): Promise<void> {
-        try {
-            // Load Open Babel from jsDelivr CDN
-            const OPENBABEL_CDN_URL = 'https://cdn.jsdelivr.net/npm/openbabel@1.0.2/openbabel.min.js';
+        // Use the build from Kekule.js which is known to work in browsers
+        const CDNS = [
+            'https://cdn.jsdelivr.net/npm/kekule/dist/extra/openbabel.js',
+            'https://unpkg.com/kekule/dist/extra/openbabel.js',
+            'https://cdn.jsdelivr.net/npm/openbabel@1.0.2/openbabel.min.js' // Fallback to original just in case
+        ];
 
-            // Check if already loaded
-            if ((window as any).OpenBabel) {
-                console.log('OpenBabel already loaded');
-                this.obModule = (window as any).OpenBabel;
-                this.isInitialized = true;
-                return;
+        let lastError: Error | null = null;
+
+        for (const cdnUrl of CDNS) {
+            try {
+                console.log(`[OpenBabel] Attempting to load from: ${cdnUrl}`);
+
+                // Check if already loaded
+                if ((window as any).OpenBabelModule && typeof (window as any).OpenBabelModule === 'function') {
+                    console.log('[OpenBabel] Factory already loaded, initializing...');
+                    const factory = (window as any).OpenBabelModule;
+                    this.obModule = await factory();
+                    this.isInitialized = true;
+                    return;
+                }
+
+                if ((window as any).OpenBabel) {
+                    console.log('[OpenBabel] Already loaded');
+                    this.obModule = (window as any).OpenBabel;
+                    this.isInitialized = true;
+                    return;
+                }
+
+                // Load the script
+                await new Promise<void>((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = cdnUrl;
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error(`Failed to load from ${cdnUrl}`));
+                    document.head.appendChild(script);
+                });
+
+                // Wait for module to be available
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // Initialize based on what we found
+                if (typeof (window as any).OpenBabelModule === 'function') {
+                    console.log('[OpenBabel] Module factory found, initializing...');
+                    const factory = (window as any).OpenBabelModule;
+                    this.obModule = await factory();
+                    console.log('[OpenBabel] Initialized successfully via Factory');
+                    this.isInitialized = true;
+                    return;
+                } else if ((window as any).OpenBabel) {
+                    this.obModule = (window as any).OpenBabel;
+                    console.log('[OpenBabel] Initialized successfully via Global');
+                    this.isInitialized = true;
+                    return;
+                } else if ((window as any).Module) {
+                    this.obModule = (window as any).Module;
+                    console.log('[OpenBabel] Initialized successfully via Module');
+                    this.isInitialized = true;
+                    return;
+                }
+
+                throw new Error('Script loaded but OpenBabel module not found');
+
+            } catch (error) {
+                console.warn(`[OpenBabel] Failed to load from ${cdnUrl}:`, error);
+                lastError = error as Error;
+                // Cleanup script tag
+                const scriptTag = document.querySelector(`script[src="${cdnUrl}"]`);
+                if (scriptTag) scriptTag.remove();
             }
-
-            // Load the script
-            await new Promise<void>((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = OPENBABEL_CDN_URL;
-                script.onload = () => resolve();
-                script.onerror = () => reject(new Error('Failed to load Open Babel script from CDN'));
-                document.head.appendChild(script);
-            });
-
-            // Wait for module to be available
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Try to get the OpenBabel module
-            if ((window as any).OpenBabel) {
-                this.obModule = (window as any).OpenBabel;
-                console.log('OpenBabel.js initialized successfully');
-                this.isInitialized = true;
-            } else if ((window as any).Module) {
-                // Some builds expose via Module global
-                this.obModule = (window as any).Module;
-                console.log('OpenBabel Module initialized');
-                this.isInitialized = true;
-            } else {
-                // If CDN doesn't work, fall back to JavaScript-based conversion
-                console.warn('OpenBabel not available, using fallback converter');
-                this.isInitialized = true; // Mark as initialized but use fallback
-            }
-        } catch (error) {
-            console.error('Failed to initialize OpenBabel:', error);
-            this.initError = `OpenBabel initialization failed: ${error}`;
-            // Don't throw - we'll use fallback methods
-            this.isInitialized = true;
         }
+
+        // If we get here, all CDNs failed
+        console.warn('[OpenBabel] All CDN loads failed, using fallback converter');
+        this.initError = `All CDNs failed. Last error: ${lastError}`;
+        this.isInitialized = true; // Mark as initialized but use fallback
     }
 
     /**

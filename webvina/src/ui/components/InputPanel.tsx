@@ -63,10 +63,27 @@ export function InputPanel() {
                 receptorPdbqt = pdbToPdbqt(receptorPdbqt);
             }
 
-            if (ligandFile.format !== 'pdbqt' && !isValidPdbqt(ligandPdbqt)) {
-                addConsoleOutput('Converting ligand to PDBQT format...');
+            // For SDF format, convert to PDBQT before sending to worker
+            if (ligandFile.format === 'sdf' || ligandPdbqt.includes('V2000') || ligandPdbqt.includes('$$$$') || ligandPdbqt.includes('M  END')) {
+                addConsoleOutput('Converting ligand SDF to PDBQT format...');
+                const { sdfToPdbqt } = await import('../../utils/sdfConverter');
+                const converted = sdfToPdbqt(ligandPdbqt);
+                if (converted.includes('HETATM') || converted.includes('ATOM')) {
+                    ligandPdbqt = converted;
+                    addConsoleOutput('SDF→PDBQT conversion successful!');
+                } else {
+                    addConsoleOutput('Warning: SDF conversion may have issues, proceeding anyway...');
+                }
+            } else if (ligandFile.format === 'pdb' && !isValidPdbqt(ligandPdbqt)) {
+                addConsoleOutput('Converting ligand PDB to PDBQT format...');
                 ligandPdbqt = pdbToPdbqt(ligandPdbqt);
             }
+
+            // Final validation - ensure we have content
+            if (!ligandPdbqt || ligandPdbqt.trim().length === 0) {
+                throw new Error('Ligand content is empty after conversion');
+            }
+            addConsoleOutput(`Ligand ready: ${ligandPdbqt.length} characters`);
 
             // Run docking
             const result = await vinaService.runDocking(

@@ -1,53 +1,68 @@
 .vina-options-panel {
-    background: white;
+    background: var(--glass-regular);
+    backdrop-filter: var(--blur-md);
     border-radius: 16px;
     padding: 20px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vina-options-panel .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 .options-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 14px;
+    margin-bottom: 14px;
 }
 
 .option-item {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .option-item label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: #555;
+    color: var(--text-secondary);
 }
 
 .option-item input {
-    padding: 12px;
-    border: 2px solid #e8e8e8;
-    border-radius: 10px;
-    font-size: 1rem;
-    color: #1a1a2e;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
     transition: all 0.2s ease;
 }
 
 .option-item input:focus {
     outline: none;
-    border-color: #0096ff;
-    box-shadow: 0 0 0 4px rgba(0, 150, 255, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(47, 172, 178, 0.2);
 }
 
 .option-hint {
-    font-size: 0.75rem;
-    color: #999;
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }
 
 .collapsible-section {
-    border-top: 1px solid #eee;
-    margin-top: 16px;
-    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+    margin-top: 14px;
+    padding-top: 10px;
 }
 
 .section-toggle {
@@ -55,17 +70,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: 8px 0;
     background: none;
     border: none;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #0096ff;
+    color: var(--primary-color);
     cursor: pointer;
 }
 
 .section-toggle:hover {
-    color: #0077cc;
+    color: var(--secondary-color);
 }
 
 .toggle-icon {
@@ -73,27 +88,27 @@
 }
 
 .section-content {
-    padding: 12px 0;
+    padding: 10px 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .checkbox-option {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .checkbox-option input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: #0096ff;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
     cursor: pointer;
 }
 
 .checkbox-option label {
-    font-size: 0.9rem;
-    color: #333;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
     cursor: pointer;
 }

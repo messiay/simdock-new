@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { rdkitService, type MolecularProperties } from '../../services/rdkitService';
 import { openBabelService, INPUT_FORMATS, OUTPUT_FORMATS, type SupportedInputFormat, type SupportedOutputFormat } from '../../services/openBabelService';
 import { pdbService } from '../../services/pdbService';
-import { pubchemService } from '../../services/pubchemService';
+import { pubchemService, type CompoundInfo } from '../../services/pubchemService';
 import { MolecularPropertiesDisplay } from './MolecularProperties';
 import { useDockingStore } from '../../store/dockingStore';
 import {
@@ -52,7 +52,7 @@ export function PrepPanel() {
     // SMILES state
     const [smilesInput, setSmilesInput] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isInitializing, setIsInitializing] = useState(true);
+    const [isInitializing, setIsInitializing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [svgDepiction, setSvgDepiction] = useState<string | null>(null);
     const [properties, setProperties] = useState<MolecularProperties | null>(null);
@@ -70,7 +70,7 @@ export function PrepPanel() {
     // PubChem import state
     const [pubchemInput, setPubchemInput] = useState('');
     const [isFetchingPubchem, setIsFetchingPubchem] = useState(false);
-    const [pubchemResult, setPubchemResult] = useState<{ name: string; content: string; format: string } | null>(null);
+    const [pubchemResult, setPubchemResult] = useState<{ name: string; content: string; format: string; properties?: CompoundInfo } | null>(null);
     const [pubchemError, setPubchemError] = useState<string | null>(null);
 
     // Format conversion state
@@ -85,22 +85,8 @@ export function PrepPanel() {
 
     const { setLigandFile, setReceptorFile, setActiveTab } = useDockingStore();
 
-    // Initialize services on mount
-    useEffect(() => {
-        const init = async () => {
-            try {
-                await Promise.all([
-                    rdkitService.initialize(),
-                    openBabelService.initialize(),
-                ]);
-                setIsInitializing(false);
-            } catch (err) {
-                setError(`Failed to initialize: ${err}`);
-                setIsInitializing(false);
-            }
-        };
-        init();
-    }, []);
+    // Services are initialized lazily when needed using init-on-demand patterns.
+    // No useEffect() is used here to prevent startup blocks.
 
     // PDB Import Handler
     const handleFetchPDB = async () => {
@@ -151,7 +137,8 @@ export function PrepPanel() {
             setPubchemResult({
                 name: result.name || `CID ${result.cid}`,
                 content: result.content,
-                format: 'sdf', // WebVina/PubChem always provides SDF for 3D
+                format: 'sdf',
+                properties: result.properties,
             });
         } else {
             setPubchemError(result.error || 'Failed to fetch compound');
@@ -163,33 +150,27 @@ export function PrepPanel() {
     const handleUsePubchemAsLigand = async () => {
         if (!pubchemResult) return;
 
-        // Auto-convert to PDBQT for docking compatibility if format is SDF
+        // Use lightweight JS converter purely for speed (User Request: Revert to when it was fast)
         setIsFetchingPubchem(true);
-        try {
-            const conversion = await openBabelService.convert(pubchemResult.content, 'sdf', 'pdbqt');
 
-            if (conversion.success && conversion.output) {
-                setLigandFile({
-                    name: `${pubchemResult.name.replace(/\s+/g, '_')}.pdbqt`,
-                    content: conversion.output,
-                    format: 'pdbqt',
-                });
-            } else {
-                console.warn("Conversion failed, falling back to SDF");
-                setLigandFile({
-                    name: `${pubchemResult.name.replace(/\s+/g, '_')}.sdf`,
-                    content: pubchemResult.content,
-                    format: 'sdf',
-                });
-            }
-        } catch (e) {
-            console.error("Conversion error", e);
+        // Instant yield to show spinner
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        try {
+            console.info('[PrepPanel] Using Fast SDF Converter (JS)');
+            const { sdfToPdbqt } = await import('../../utils/sdfConverter');
+            const pdbqtContent = sdfToPdbqt(pubchemResult.content);
+
             setLigandFile({
-                name: `${pubchemResult.name.replace(/\s+/g, '_')}.sdf`,
-                content: pubchemResult.content,
-                format: 'sdf',
+                name: `${pubchemResult.name.replace(/\s+/g, '_')}.pdbqt`,
+                content: pdbqtContent,
+                format: 'pdbqt',
             });
+
+        } catch (e) {
+            console.error('[PrepPanel] Conversion error', e);
         }
+
         setIsFetchingPubchem(false);
         setActiveTab('input');
     };
@@ -206,6 +187,9 @@ export function PrepPanel() {
         setSvgDepiction(null);
         setProperties(null);
         setProcessedData(null);
+
+        // Yield for UI update
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
             const result = await rdkitService.processSMILES(smilesInput.trim());
@@ -296,6 +280,7 @@ export function PrepPanel() {
             name: `converted.${outputFormat}`,
             content: conversionResult,
             format: outputFormat,
+            loading: false
         });
         setActiveTab('input');
     };
@@ -306,6 +291,7 @@ export function PrepPanel() {
             name: `converted.${outputFormat}`,
             content: conversionResult,
             format: outputFormat,
+            loading: false
         });
         setActiveTab('input');
     };
@@ -320,18 +306,6 @@ export function PrepPanel() {
         a.click();
         URL.revokeObjectURL(url);
     };
-
-    if (isInitializing) {
-        return (
-            <div className="prep-panel">
-                <div className="init-loading">
-                    <Loader2 size={64} className="spin-icon" style={{ color: 'var(--accent-primary)' }} />
-                    <h2>Initializing SimDock</h2>
-                    <p>Loading RDKit.js and chemical tools...</p>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="prep-panel">
@@ -445,13 +419,91 @@ export function PrepPanel() {
                 {pubchemError && <div className="import-error"><AlertTriangle size={16} /> {pubchemError}</div>}
 
                 {pubchemResult && (
-                    <div className="import-result">
+                    <div className="import-result pubchem-result">
                         <div className="result-header">
                             <span className="success-icon"><CheckCircle size={16} /></span>
                             <span>{pubchemResult.name}</span>
                         </div>
+
+                        {/* ADME Properties Display */}
+                        {pubchemResult.properties && (
+                            <div className="adme-properties">
+                                <h4>📊 Compound Properties</h4>
+                                <div className="properties-grid">
+                                    {pubchemResult.properties.formula && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">Formula</span>
+                                            <span className="prop-value">{pubchemResult.properties.formula}</span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.molecularWeight && typeof pubchemResult.properties.molecularWeight === 'number' && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">MW</span>
+                                            <span className="prop-value">{pubchemResult.properties.molecularWeight.toFixed(2)} g/mol</span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.adme?.xLogP !== undefined && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">XLogP</span>
+                                            <span className={`prop-value ${pubchemResult.properties.adme.xLogP <= 5 ? 'good' : 'warning'}`}>
+                                                {pubchemResult.properties.adme.xLogP.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.adme?.tpsa !== undefined && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">TPSA</span>
+                                            <span className={`prop-value ${pubchemResult.properties.adme.tpsa <= 140 ? 'good' : 'warning'}`}>
+                                                {pubchemResult.properties.adme.tpsa.toFixed(1)} Å²
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.adme?.hBondDonors !== undefined && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">H-Donors</span>
+                                            <span className={`prop-value ${pubchemResult.properties.adme.hBondDonors <= 5 ? 'good' : 'warning'}`}>
+                                                {pubchemResult.properties.adme.hBondDonors}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.adme?.hBondAcceptors !== undefined && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">H-Acceptors</span>
+                                            <span className={`prop-value ${pubchemResult.properties.adme.hBondAcceptors <= 10 ? 'good' : 'warning'}`}>
+                                                {pubchemResult.properties.adme.hBondAcceptors}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pubchemResult.properties.adme?.rotatableBonds !== undefined && (
+                                        <div className="prop-item">
+                                            <span className="prop-label">Rot. Bonds</span>
+                                            <span className={`prop-value ${pubchemResult.properties.adme.rotatableBonds <= 10 ? 'good' : 'warning'}`}>
+                                                {pubchemResult.properties.adme.rotatableBonds}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Lipinski Rule of 5 Check */}
+                                {pubchemResult.properties.adme && pubchemResult.properties.molecularWeight && (
+                                    <div className={`lipinski-badge ${(pubchemResult.properties.molecularWeight <= 500) &&
+                                        (pubchemResult.properties.adme.xLogP === undefined || pubchemResult.properties.adme.xLogP <= 5) &&
+                                        (pubchemResult.properties.adme.hBondDonors === undefined || pubchemResult.properties.adme.hBondDonors <= 5) &&
+                                        (pubchemResult.properties.adme.hBondAcceptors === undefined || pubchemResult.properties.adme.hBondAcceptors <= 10)
+                                        ? 'pass' : 'fail'
+                                        }`}>
+                                        {(pubchemResult.properties.molecularWeight <= 500) &&
+                                            (pubchemResult.properties.adme.xLogP === undefined || pubchemResult.properties.adme.xLogP <= 5) &&
+                                            (pubchemResult.properties.adme.hBondDonors === undefined || pubchemResult.properties.adme.hBondDonors <= 5) &&
+                                            (pubchemResult.properties.adme.hBondAcceptors === undefined || pubchemResult.properties.adme.hBondAcceptors <= 10)
+                                            ? '✓ Lipinski Rule of 5 Compliant' : '⚠ Lipinski Rule of 5 Violation'}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button className="action-btn primary" onClick={handleUsePubchemAsLigand}>
-                            <Target size={16} /> Use as Ligand
+                            <Target size={16} /> PROCEED TO DOCKING ⚡
                         </button>
                     </div>
                 )}
@@ -646,6 +698,7 @@ export function PrepPanel() {
                                 <pre>{conversionResult.substring(0, 500)}...</pre>
                             </div>
                         </div>
+
                     )}
                 </div>
             </div>

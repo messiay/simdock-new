@@ -348,30 +348,52 @@ function translatePdbqt(pdbqtContent: string, center: { x: number; y: number; z:
 }
 
 function wrapPdbqtAsModel(content: string, modelNum: number, affinity: number, center: { x: number; y: number; z: number }): string {
+    console.log(`[Worker] wrapPdbqtAsModel called for model ${modelNum}, input length: ${content?.length || 0}`);
+
+    if (!content || content.trim().length === 0) {
+        console.warn('[Worker] Empty content passed to wrapPdbqtAsModel');
+        return `MODEL ${modelNum}\nREMARK VINA RESULT:    ${affinity.toFixed(1)}      0.000      0.000\nREMARK ERROR: No ligand content available\nENDMDL`;
+    }
+
     // Detect if the content is SDF/MOL format
     const isSDF = content.includes('$$$$') ||
         content.includes('M  END') ||
         content.includes('V2000') ||
         content.includes('V3000');
 
+    console.log(`[Worker] Format detected: ${isSDF ? 'SDF' : 'PDB/PDBQT'}`);
+
     // Convert SDF to PDBQT or translate PDBQT coordinates
     let pdbqtContent: string;
     if (isSDF) {
         pdbqtContent = sdfToPdbqt(content, center);
+        console.log(`[Worker] sdfToPdbqt output length: ${pdbqtContent?.length || 0}`);
     } else {
         pdbqtContent = translatePdbqt(content, center);
+        console.log(`[Worker] translatePdbqt output length: ${pdbqtContent?.length || 0}`);
     }
 
-    // Remove any existing MODEL/ENDMDL markers from the content
-    const cleanedContent = pdbqtContent
+    // Check if conversion produced valid output
+    const hasAtoms = pdbqtContent.includes('ATOM') || pdbqtContent.includes('HETATM');
+    console.log(`[Worker] Has ATOM/HETATM lines: ${hasAtoms}`);
+
+    // If no atoms found after conversion, keep original content for 3Dmol to attempt parsing
+    let finalContent = pdbqtContent;
+    if (!hasAtoms) {
+        console.warn('[Worker] No ATOM lines after conversion, keeping original content');
+        finalContent = content; // Keep original - let viewer try to parse it
+    }
+
+    // Remove only MODEL/ENDMDL markers, keep everything else
+    const cleanedContent = finalContent
         .split('\n')
         .filter(line => {
             const trimmed = line.trim().toUpperCase();
-            return trimmed !== '' &&
-                !trimmed.startsWith('MODEL') &&
-                !trimmed.startsWith('ENDMDL');
+            return !trimmed.startsWith('MODEL') && !trimmed.startsWith('ENDMDL');
         })
         .join('\n');
+
+    console.log(`[Worker] Cleaned content length: ${cleanedContent.length}, preview: ${cleanedContent.substring(0, 100)}`);
 
     return [
         `MODEL ${modelNum}`,

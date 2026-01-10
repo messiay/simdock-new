@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useDockingStore } from '../../store/dockingStore';
 import type { MoleculeFile } from '../../types';
 import { UploadCloud, FileText, X } from 'lucide-react';
+import { sdfToPdbqt, isSdfFormat } from '../../utils/sdfConverter';
 import '../styles/FileUpload.css';
 
 interface FileUploadProps {
@@ -147,13 +148,43 @@ export function ReceptorUpload() {
 export function LigandUpload() {
     const { ligandFile, setLigandFile } = useDockingStore();
 
+    // Wrapper that converts SDF to PDBQT on upload
+    const handleLigandChange = useCallback((file: MoleculeFile | null) => {
+        if (!file) {
+            setLigandFile(null);
+            return;
+        }
+
+        // Check if file is SDF format and convert immediately
+        if (file.format === 'sdf' || file.format === 'mol' || file.format === 'sd' || isSdfFormat(file.content)) {
+            console.info('[LigandUpload] Converting SDF to PDBQT on upload...');
+            const pdbqtContent = sdfToPdbqt(file.content);
+
+            // If conversion succeeded (has HETATM lines), use converted content
+            if (pdbqtContent.includes('HETATM') || pdbqtContent.includes('ATOM')) {
+                setLigandFile({
+                    name: file.name.replace(/\.(sdf|mol|sd)$/i, '.pdbqt'),
+                    content: pdbqtContent,
+                    format: 'pdbqt',
+                });
+                console.info('[LigandUpload] SDF converted to PDBQT successfully!');
+            } else {
+                // Conversion failed, keep original
+                console.warn('[LigandUpload] SDF conversion failed, keeping original');
+                setLigandFile(file);
+            }
+        } else {
+            setLigandFile(file);
+        }
+    }, [setLigandFile]);
+
     return (
         <FileUpload
             label="Ligand File"
             description="PDBQT (best), MOL, MOL2, SDF, PDB, SMI, XYZ"
             acceptedFormats={['pdbqt', 'mol', 'mol2', 'sdf', 'sd', 'pdb', 'smi', 'smiles', 'xyz', 'can', 'mdl']}
             file={ligandFile}
-            onFileChange={setLigandFile}
+            onFileChange={handleLigandChange}
         />
     );
 }

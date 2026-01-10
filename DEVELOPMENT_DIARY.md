@@ -401,12 +401,64 @@ See [index.css](file:///c:/Users/user/OneDrive/Desktop/simdock_pro%203.1%20-%20C
 
 ---
 
+## 11. Development Session Log: January 10, 2026
+
+### 11.1 UI/UX Improvements - Panel Scrollbars
+
+**Issue:** The Input Parameters panel had non-functional scroll buttons (ChevronLeft/Right/Up/Down icons) that didn't properly scroll the content.
+
+**Resolution:**
+1. Removed custom scroll buttons from `DraggablePanel.tsx` - eliminated the complex button-based scrolling system
+2. Replaced with native browser scrollbars styled with teal/cyan gradient to match the app theme
+3. Updated `DraggablePanel.css` with:
+   - `overflow-x: auto` and `overflow-y: auto` for both-direction scrolling
+   - 12px scrollbar width for visibility
+   - Custom `::-webkit-scrollbar-thumb` styling with gradient colors
+   - Firefox support via `scrollbar-width` and `scrollbar-color`
+4. Fixed conflicting styles in `App.css` that were setting `width: 100%` and `overflow: hidden` on `.input-panel`, preventing horizontal scrolling
+5. Updated `InputPanel.css` with `width: max-content` and `min-width: 100%` to allow content expansion
+6. Updated `DockingBoxPanel.css` with `min-width: 380px` to ensure all 3 coordinate columns (X, Y, Z) remain visible
+
+**Result:** Both horizontal and vertical scrollbars now work correctly, allowing access to all panel content.
+
+### 11.2 Bug Fix - Save Mission Feature
+
+**Issue:** The Save button in the FloatingToolbar was completely unresponsive - no modal appeared, no alerts, and no console output. Later, the modal would appear but clicking "Save Log" button had no effect.
+
+**Root Cause Analysis:** 
+- The `.ui-overlay-layer` in App.css has `pointer-events: none` to allow clicks to pass through to the 3D viewer
+- Several UI elements are whitelisted with `pointer-events: auto` (sidebar, panels, toolbar)
+- The `.save-modal-overlay` was **NOT** in this whitelist, so clicks on the "Save Log" button were passing through to the 3D viewer instead of being captured by the button
+
+**Resolution:**
+- Added `.save-modal-overlay` to the `pointer-events: auto` selector list in `App.css` (line 42)
+- This allows the modal and its buttons to receive click events
+
+**Verification:** Browser testing confirmed the Save Log button now works correctly for both new and existing missions.
+
+---
+
 ## Document Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | January 6, 2026 | Development Team | Initial comprehensive documentation |
+| 1.1 | January 10, 2026 | Development Team | Added scrollbar fix and save feature fix documentation |
 
 ---
 
 *This document is maintained as part of the SimDock Pro project and should be updated with each significant development milestone.*
+
+## [2026-01-10] Performance Overhaul & Responsiveness Fixes
+
+**Issues Addressed:**
+1. **Application Freezing:** Fixed a critical issue where the application froze ("Page Unresponsive") due to synchronous storage of large file contents in localStorage.
+2. **Startup Delays:** Removed blocking initialization of RDKit and OpenBabel. Implemented Lazy Loading.
+3. **Use as Ligand Lag:** Replaced the heavy OpenBabel WASM conversion for PubChem imports with a lightweight JavaScript fallback (sdfToPdbqt), ensuring instant responsiveness.
+
+**Technical Changes:**
+- **Storage:** Updated DockingStore (v2) to exclude eceptorFile and ligandFile content from persistence.
+- **PrepPanel:** Refactored handleUsePubchemAsLigand to prioritize JS conversion.
+- **MoleculeViewer:** Split useEffect to decouple model rendering from box updates.
+- **UI:** Renamed "Use as Ligand" to "PROCEED TO DOCKING ?" to verify code updates.
+

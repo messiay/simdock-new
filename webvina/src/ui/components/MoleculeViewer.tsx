@@ -36,7 +36,6 @@ export function MoleculeViewer() {
         if (!containerRef.current || !window.$3Dmol || viewerInstanceRef.current) return;
 
         try {
-            // ... standard initialization ...
             // Initial background based on current theme
             const bgColor = theme === 'light' ? '#FFFFFF' : '#000000';
 
@@ -124,16 +123,14 @@ export function MoleculeViewer() {
         };
     }, []);
 
-    // MAIN RENDER LOOP: Update viewer when files/params/viewMode change
+    // EFFECT 1: UPDATE MODELS (Heavy Operation - Only run when files change)
     useEffect(() => {
         if (!isReady || !viewerInstanceRef.current) return;
 
         const viewer = viewerInstanceRef.current;
+        // console.time('[MoleculeViewer] Update Models');
 
         try {
-            // DETERMINE COLORS BASED ON THEME
-            // Styles removed as they were related to Axes/Grid which are now removed.
-
             // Check if we have results and a valid pose
             const hasResult = !!(result && result.poses && result.poses[selectedPose]);
             const ligandContent = hasResult
@@ -141,7 +138,6 @@ export function MoleculeViewer() {
                 : ligandFile?.content;
 
             viewer.removeAllModels();
-            viewer.removeAllShapes();
             viewer.removeAllSurfaces();
 
             // Add receptor
@@ -155,6 +151,8 @@ export function MoleculeViewer() {
 
                 // Safe check: Ensure model exists AND has atoms
                 if (receptorModel && typeof receptorModel.selectedAtoms === 'function' && receptorModel.selectedAtoms().length > 0) {
+                    const atomCount = receptorModel.selectedAtoms().length;
+
                     // Apply style based on view mode
                     try {
                         if (viewMode === 'cartoon') {
@@ -162,64 +160,78 @@ export function MoleculeViewer() {
                         } else if (viewMode === 'sticks') {
                             viewer.setStyle({ model: receptorModel }, { stick: { colorscheme: 'Jmol' } });
                         } else if (viewMode === 'surface') {
-                            viewer.setStyle({ model: receptorModel }, { cartoon: { color: 'spectrum', opacity: 0.5 } });
-                            // Surface is added as a shape/surface, not style
-                            viewer.addSurface(window.$3Dmol.SurfaceType.VDW, {
-                                opacity: 0.7,
-                                color: 'white',
-                            }, { model: receptorModel });
+                            // For surface mode, show cartoon underneath + transparent surface on top
+                            viewer.setStyle({ model: receptorModel }, { cartoon: { color: 'spectrum', opacity: 0.3 } });
+
+                            // Only add surface if we have significant atoms
+                            if (atomCount > 10) {
+                                try {
+                                    viewer.addSurface(window.$3Dmol.SurfaceType.VDW, {
+                                        opacity: 0.6,
+                                        colorScheme: { prop: 'b', gradient: 'roygb' },
+                                    }, { model: receptorModel });
+                                } catch (surfaceErr) {
+                                    console.warn('[MoleculeViewer] Surface generation failed', surfaceErr);
+                                }
+                            } else {
+                                viewer.setStyle({ model: receptorModel }, { sphere: { colorscheme: 'Jmol', scale: 0.3 } });
+                            }
                         }
                     } catch (styleErr) {
                         console.error('[MoleculeViewer] Error applying style to receptor:', styleErr);
                     }
-                } else {
-                    console.warn('[MoleculeViewer] Receptor model added but has 0 atoms or failed.');
                 }
             }
 
             // ADD LIGAND
             if (ligandContent && ligandContent.trim().length > 0) {
+                // Smart format detection
+                let format = 'pdb'; // Default
+                const contentLower = ligandContent.toLowerCase();
+                const hasModelTags = ligandContent.includes('MODEL') && ligandContent.includes('ENDMDL');
+                const isSDF = contentLower.includes('m  end') ||
+                    contentLower.includes('$$$$') ||
+                    contentLower.includes('v2000') ||
+                    contentLower.includes('v3000');
+                const hasPdbAtoms = ligandContent.includes('ATOM') || ligandContent.includes('HETATM');
 
-                // Determine format logic
-                let format = 'pdb'; // Fallback
-                if (hasResult) {
-                    // Try 'pdb' for Vina results, as they are PDBQT fragments
-                    format = 'pdb';
-                } else if (ligandFile?.format) {
-                    format = ligandFile.format === 'pdbqt' ? 'pdb' : ligandFile.format;
-                }
+                if (isSDF && !hasPdbAtoms) format = 'sdf';
+                else if (hasModelTags || hasPdbAtoms) format = 'pdb';
+                else if (ligandFile?.format && ligandFile.format !== 'pdbqt') format = ligandFile.format;
 
                 const ligandModel = viewer.addModel(ligandContent, format);
 
                 if (ligandModel && typeof ligandModel.selectedAtoms === 'function' && ligandModel.selectedAtoms().length > 0) {
-                    // Style ligand with bright colors and thicker sticks
                     try {
-                        // Use ligandModel instance for selection
                         viewer.setStyle({ model: ligandModel }, {
-                            stick: {
-                                colorscheme: 'greenCarbon', // Distinct green for ligand
-                                radius: 0.3,
-                            },
-                            sphere: {
-                                colorscheme: 'greenCarbon',
-                                scale: 0.3,
-                            }
+                            stick: { colorscheme: 'greenCarbon', radius: 0.3 },
+                            sphere: { colorscheme: 'greenCarbon', scale: 0.3 }
                         });
-                    } catch (styleErr) {
-                        console.error('[MoleculeViewer] Error applying style to ligand:', styleErr);
-                    }
-                } else {
-                    console.warn('[MoleculeViewer] Ligand model added but has 0 atoms or failed.');
+                    } catch (styleErr) { console.error(styleErr); }
                 }
             }
+
+            viewer.zoomTo();
+            viewer.render();
+            // console.timeEnd('[MoleculeViewer] Update Models');
+
+        } catch (error) {
+            console.error('Error updating viewer models:', error);
+        }
+    }, [receptorFile, ligandFile, viewMode, isReady, result, selectedPose]); // Removed params/showBox from dependency
+
+    // EFFECT 2: UPDATE BOX/SHAPES (Light Operation - Runs when box params change)
+    useEffect(() => {
+        if (!isReady || !viewerInstanceRef.current) return;
+        const viewer = viewerInstanceRef.current;
+
+        try {
+            viewer.removeAllShapes(); // Only clears box/cylinders
 
             // Add docking box visualization
             if (showBox && params.sizeX > 0 && params.sizeY > 0 && params.sizeZ > 0) {
                 const { centerX, centerY, centerZ, sizeX, sizeY, sizeZ } = params;
-
-                const halfX = sizeX / 2;
-                const halfY = sizeY / 2;
-                const halfZ = sizeZ / 2;
+                const halfX = sizeX / 2, halfY = sizeY / 2, halfZ = sizeZ / 2;
 
                 const corners = [
                     [centerX - halfX, centerY - halfY, centerZ - halfZ],
@@ -232,11 +244,7 @@ export function MoleculeViewer() {
                     [centerX - halfX, centerY + halfY, centerZ + halfZ],
                 ];
 
-                const edges = [
-                    [0, 1], [1, 2], [2, 3], [3, 0],
-                    [4, 5], [5, 6], [6, 7], [7, 4],
-                    [0, 4], [1, 5], [2, 6], [3, 7],
-                ];
+                const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
 
                 for (const [i, j] of edges) {
                     viewer.addCylinder({
@@ -249,7 +257,6 @@ export function MoleculeViewer() {
                     });
                 }
 
-                // Add transparent box surface for better visibility
                 viewer.addBox({
                     center: { x: centerX, y: centerY, z: centerZ },
                     dimensions: { w: sizeX, h: sizeY, d: sizeZ },
@@ -257,15 +264,12 @@ export function MoleculeViewer() {
                     opacity: 0.1
                 });
             }
-
-            // ZOOM UPDATE
-            viewer.zoomTo();
             viewer.render();
 
         } catch (error) {
-            console.error('Error updating viewer:', error);
+            console.error('Error updating viewer shapes:', error);
         }
-    }, [receptorFile, ligandFile, params, viewMode, isReady, result, selectedPose, showBox]);
+    }, [params, showBox, isReady]);
 
     return (
         <div className="molecule-viewer">
@@ -280,7 +284,7 @@ export function MoleculeViewer() {
                         position: 'absolute',
                         top: 0,
                         left: 0,
-                        backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000' // Force strict background
+                        backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000'
                     }}
                 />
 

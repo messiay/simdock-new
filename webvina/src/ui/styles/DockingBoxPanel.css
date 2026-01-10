@@ -1,24 +1,26 @@
 .docking-box-panel {
     background: var(--glass-regular);
     backdrop-filter: var(--blur-md);
-    border-radius: 20px;
-    padding: 24px;
+    border-radius: 16px;
+    padding: 20px;
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-lg);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .panel-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 20px 0;
-    font-size: 1.2rem;
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
     color: var(--text-primary);
     font-weight: 600;
 }
 
 .title-icon {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
@@ -26,22 +28,22 @@
 .detection-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
 .detection-btn {
-    padding: 14px 16px;
-    border-radius: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.3s ease;
     border: 1px solid transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .blind-btn {
@@ -74,10 +76,10 @@
 
 /* Detection Result */
 .detection-result {
-    padding: 12px 16px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    font-size: 0.9rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
     font-weight: 500;
 }
 
@@ -93,8 +95,9 @@
     color: #ffb400;
 }
 
+/* Box Sections */
 .box-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .box-section:last-child {
@@ -102,43 +105,47 @@
 }
 
 .section-label {
-    margin: 0 0 12px 0;
-    font-size: 0.85rem;
+    margin: 0 0 10px 0;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
+/* Coordinate Inputs - X Y Z */
 .coordinate-inputs {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
 }
 
 .coord-input {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .coord-input label {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--primary-color);
     text-transform: uppercase;
+    text-align: center;
 }
 
 .coord-input input {
-    padding: 14px;
+    padding: 10px 8px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    font-size: 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
     font-weight: 600;
     text-align: center;
     color: var(--text-primary);
     transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .coord-input input:focus {
@@ -150,73 +157,4 @@
 .coord-input input::-webkit-inner-spin-button,
 .coord-input input::-webkit-outer-spin-button {
     opacity: 0.7;
-}
-
-.panel-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0 0 20px 0;
-    font-size: 1.1rem;
-    color: #1a1a2e;
-}
-
-.title-icon {
-    font-size: 1.3rem;
-}
-
-.box-section {
-    margin-bottom: 20px;
-}
-
-.box-section:last-child {
-    margin-bottom: 0;
-}
-
-.section-label {
-    margin: 0 0 12px 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #555;
-}
-
-.coordinate-inputs {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-.coord-input {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.coord-input label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-}
-
-.coord-input input {
-    padding: 12px;
-    border: 2px solid #e8e8e8;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
-    color: #1a1a2e;
-    transition: all 0.2s ease;
-}
-
-.coord-input input:focus {
-    outline: none;
-    border-color: #0096ff;
-    box-shadow: 0 0 0 4px rgba(0, 150, 255, 0.1);
-}
-
-.coord-input input::-webkit-inner-spin-button,
-.coord-input input::-webkit-outer-spin-button {
-    opacity: 1;
 }

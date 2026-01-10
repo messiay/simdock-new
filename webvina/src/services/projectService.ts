@@ -24,18 +24,38 @@ const getDB = async () => {
 
 export const projectService = {
     async saveProject(project: SavedProject): Promise<void> {
+        console.info('[projectService] Saving project:', project.name, project.id);
         const db = await getDB();
         await db.put(STORE_NAME, project);
+        console.info('[projectService] Project saved successfully');
     },
 
     async getProjects(username: string): Promise<SavedProject[]> {
+        console.info('[projectService] Loading projects for:', username);
         const db = await getDB();
-        const all = await db.getAllFromIndex(STORE_NAME, 'username', username);
+
+        // Try to get by username first
+        let list = await db.getAllFromIndex(STORE_NAME, 'username', username);
+
+        // If no results, get all projects (in case of username mismatch)
+        if (list.length === 0) {
+            console.info('[projectService] No projects for username, fetching all');
+            list = await db.getAll(STORE_NAME);
+        }
+
+        console.info('[projectService] Found', list.length, 'projects');
         // Sort by timestamp desc (newest first)
-        return all.sort((a, b) => b.timestamp - a.timestamp);
+        return list.sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    async getAllProjects(): Promise<SavedProject[]> {
+        const db = await getDB();
+        const list = await db.getAll(STORE_NAME);
+        return list.sort((a, b) => b.timestamp - a.timestamp);
     },
 
     async deleteProject(id: string): Promise<void> {
+        console.info('[projectService] Deleting project:', id);
         const db = await getDB();
         await db.delete(STORE_NAME, id);
     },

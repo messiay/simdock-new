@@ -844,3 +844,84 @@
         transform: rotate(360deg);
     }
 }
+
+/* PubChem Result with ADME Properties */
+.pubchem-result {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.adme-properties {
+    margin-top: 12px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border: 1px solid rgba(47, 172, 178, 0.2);
+}
+
+.adme-properties h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.prop-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.prop-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.prop-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.prop-value.good {
+    color: #00cc6a;
+}
+
+.prop-value.warning {
+    color: #ffb400;
+}
+
+/* Lipinski Badge */
+.lipinski-badge {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.lipinski-badge.pass {
+    background: rgba(0, 204, 106, 0.15);
+    border: 1px solid rgba(0, 204, 106, 0.3);
+    color: #00cc6a;
+}
+
+.lipinski-badge.fail {
+    background: rgba(255, 180, 0, 0.15);
+    border: 1px solid rgba(255, 180, 0, 0.3);
+    color: #ffb400;
+}

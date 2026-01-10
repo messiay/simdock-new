@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { useDockingStore } from '../../store/dockingStore';
 import type { TabId } from '../../core/types';
 import {
@@ -10,7 +11,9 @@ import {
     Sun,
     Moon,
     RotateCcw,
-    Database
+    Database,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import '../styles/Sidebar.css';
 
@@ -23,6 +26,9 @@ interface TabConfig {
 
 export function Sidebar() {
     const { activeTab, setActiveTab, isRunning, result, startOver, theme, toggleTheme } = useDockingStore();
+    const navRef = useRef<HTMLElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
 
     const tabs: TabConfig[] = [
         { id: 'prep', label: 'Molecule Import', icon: <TestTube2 size={20} /> },
@@ -32,6 +38,36 @@ export function Sidebar() {
         { id: 'output', label: 'Output', icon: <BarChart3 size={20} />, disabled: () => !result },
         { id: 'projects', label: 'Mission Log', icon: <Database size={20} /> },
     ];
+
+    // Check if scrolling is possible
+    useEffect(() => {
+        const checkScroll = () => {
+            if (navRef.current) {
+                const { scrollTop, scrollHeight, clientHeight } = navRef.current;
+                setCanScrollLeft(scrollTop > 0);
+                setCanScrollRight(scrollTop + clientHeight < scrollHeight - 5);
+            }
+        };
+
+        checkScroll();
+        navRef.current?.addEventListener('scroll', checkScroll);
+        window.addEventListener('resize', checkScroll);
+
+        return () => {
+            navRef.current?.removeEventListener('scroll', checkScroll);
+            window.removeEventListener('resize', checkScroll);
+        };
+    }, []);
+
+    const scrollNav = (direction: 'up' | 'down') => {
+        if (navRef.current) {
+            const scrollAmount = 100;
+            navRef.current.scrollBy({
+                top: direction === 'down' ? scrollAmount : -scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     return (
         <aside className="sidebar">
@@ -43,7 +79,14 @@ export function Sidebar() {
                 <p className="app-subtitle">Browser-Based Molecular Docking</p>
             </div>
 
-            <nav className="sidebar-nav">
+            {/* Scroll Up Button */}
+            {canScrollLeft && (
+                <button className="nav-scroll-btn scroll-up" onClick={() => scrollNav('up')}>
+                    <ChevronLeft size={20} style={{ transform: 'rotate(90deg)' }} />
+                </button>
+            )}
+
+            <nav className="sidebar-nav" ref={navRef}>
                 {tabs.map((tab) => {
                     const isDisabled = tab.disabled?.() ?? false;
                     const isActive = activeTab === tab.id;
@@ -63,6 +106,13 @@ export function Sidebar() {
                 })}
             </nav>
 
+            {/* Scroll Down Button */}
+            {canScrollRight && (
+                <button className="nav-scroll-btn scroll-down" onClick={() => scrollNav('down')}>
+                    <ChevronRight size={20} style={{ transform: 'rotate(90deg)' }} />
+                </button>
+            )}
+
             <div className="sidebar-footer">
                 <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -79,3 +129,4 @@ export function Sidebar() {
         </aside>
     );
 }
+

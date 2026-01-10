@@ -148,13 +148,15 @@ export const useDockingStore = create<DockingStore>()(
         {
             name: 'simdock-docking-state',
             // Exclude transient state from persistence
+            // Note: result is NOT persisted to avoid loading corrupted pose data
             partialize: (state) => ({
-                receptorFile: state.receptorFile,
-                ligandFile: state.ligandFile,
-                correctPoseFile: state.correctPoseFile,
+                // Files are too large to persist in localStorage (causes freezing)
+                // receptorFile: state.receptorFile,
+                // ligandFile: state.ligandFile,
+                // correctPoseFile: state.correctPoseFile,
                 params: state.params,
-                result: state.result,
-                selectedPose: state.selectedPose,
+                // result: state.result, // Excluded
+                // selectedPose: state.selectedPose, // Excluded
                 viewMode: state.viewMode,
                 activeTab: state.activeTab,
                 showBox: state.showBox,
@@ -162,6 +164,7 @@ export const useDockingStore = create<DockingStore>()(
                 showAxes: state.showAxes,
                 theme: state.theme,
             }),
+            version: 2, // Clear old state to remove bloated files
         }
     )
 );

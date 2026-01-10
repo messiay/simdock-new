@@ -1,10 +1,10 @@
 .input-panel {
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    padding: 24px;
-    max-width: 1400px;
-    margin: 0 auto;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .section-header {
@@ -103,9 +103,10 @@
 }
 
 .params-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
 }
 
 .error-message {

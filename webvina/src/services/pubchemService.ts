@@ -10,6 +10,17 @@ export interface PubChemFetchResult {
     name?: string;
     format?: 'sdf' | 'pdb';
     error?: string;
+    properties?: CompoundInfo;
+}
+
+export interface ADMEProperties {
+    xLogP?: number;           // Lipophilicity - affects absorption
+    tpsa?: number;            // Topological Polar Surface Area - affects permeability
+    hBondDonors?: number;     // Hydrogen Bond Donor Count (Lipinski: ≤5)
+    hBondAcceptors?: number;  // Hydrogen Bond Acceptor Count (Lipinski: ≤10)
+    rotatableBonds?: number;  // Rotatable Bond Count (drug-likeness)
+    complexity?: number;      // Molecular complexity
+    heavyAtomCount?: number;  // Heavy atom count
 }
 
 export interface CompoundInfo {
@@ -19,6 +30,7 @@ export interface CompoundInfo {
     molecularWeight?: number;
     smiles?: string;
     inchiKey?: string;
+    adme?: ADMEProperties;
 }
 
 class PubChemService {
@@ -49,6 +61,7 @@ class PubChemService {
                     content,
                     name: info?.name || `CID ${cidNum}`,
                     format: 'sdf',
+                    properties: info || undefined,
                 };
             }
 
@@ -65,6 +78,7 @@ class PubChemService {
                     content,
                     name: info?.name || `CID ${cidNum}`,
                     format: 'sdf',
+                    properties: info || undefined,
                 };
             }
 
@@ -115,11 +129,18 @@ class PubChemService {
     }
 
     /**
-     * Get compound information
+     * Get compound information including ADME properties
      */
     async getCompoundInfo(cid: number): Promise<CompoundInfo | null> {
         try {
-            const url = `${this.PUBCHEM_BASE_URL}/compound/cid/${cid}/property/Title,MolecularFormula,MolecularWeight,CanonicalSMILES,InChIKey/JSON`;
+            // Fetch basic properties and ADME properties in one request
+            const properties = [
+                'Title', 'MolecularFormula', 'MolecularWeight', 'CanonicalSMILES', 'InChIKey',
+                'XLogP', 'TPSA', 'HBondDonorCount', 'HBondAcceptorCount',
+                'RotatableBondCount', 'Complexity', 'HeavyAtomCount'
+            ].join(',');
+
+            const url = `${this.PUBCHEM_BASE_URL}/compound/cid/${cid}/property/${properties}/JSON`;
             const response = await fetch(url);
 
             if (!response.ok) return null;
@@ -133,9 +154,18 @@ class PubChemService {
                 cid,
                 name: props.Title || `CID ${cid}`,
                 formula: props.MolecularFormula,
-                molecularWeight: props.MolecularWeight,
+                molecularWeight: props.MolecularWeight ? parseFloat(props.MolecularWeight) : undefined,
                 smiles: props.CanonicalSMILES,
                 inchiKey: props.InChIKey,
+                adme: {
+                    xLogP: props.XLogP ? parseFloat(props.XLogP) : undefined,
+                    tpsa: props.TPSA ? parseFloat(props.TPSA) : undefined,
+                    hBondDonors: props.HBondDonorCount ? parseInt(props.HBondDonorCount) : undefined,
+                    hBondAcceptors: props.HBondAcceptorCount ? parseInt(props.HBondAcceptorCount) : undefined,
+                    rotatableBonds: props.RotatableBondCount ? parseInt(props.RotatableBondCount) : undefined,
+                    complexity: props.Complexity ? parseFloat(props.Complexity) : undefined,
+                    heavyAtomCount: props.HeavyAtomCount ? parseInt(props.HeavyAtomCount) : undefined,
+                }
             };
         } catch {
             return null;

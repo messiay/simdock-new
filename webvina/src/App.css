@@ -39,7 +39,8 @@
 .prep-panel,
 .input-panel,
 .output-workspace-panel,
-.floating-toolbar {
+.floating-toolbar,
+.save-modal-overlay {
   pointer-events: auto;
 }
 
@@ -58,7 +59,6 @@
 
 /* Ensure inner panels don't have conflicting container styles */
 .output-workspace-panel,
-.input-panel,
 .prep-panel {
   width: 100%;
   height: 100%;
@@ -71,6 +71,14 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* Input panel needs special handling for horizontal scroll */
+.input-panel {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  /* width, min-width, padding handled in InputPanel.css */
 }
 
 /* Base text color - Theme aware */

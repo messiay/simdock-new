@@ -9,7 +9,7 @@ interface DraggablePanelProps {
     width?: string;
     height?: string;
     onClose?: () => void;
-    className?: string; // Add className prop
+    className?: string;
 }
 
 export function DraggablePanel({
@@ -31,11 +31,9 @@ export function DraggablePanel({
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
 
-            // Calculate new position
             let newX = e.clientX - dragOffset.x;
             let newY = e.clientY - dragOffset.y;
 
-            // Boundary checks (keep distinct from screen edges)
             const maxX = window.innerWidth - 50;
             const maxY = window.innerHeight - 50;
 
@@ -64,7 +62,6 @@ export function DraggablePanel({
     }, [isDragging, dragOffset]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        // Only trigger drag from the header
         setIsDragging(true);
         setDragOffset({
             x: e.clientX - position.x,
@@ -90,9 +87,12 @@ export function DraggablePanel({
                     <button className="panel-close" onClick={onClose}>×</button>
                 )}
             </div>
+
+            {/* Scrollable content area with native scrollbars */}
             <div className="panel-content">
                 {children}
             </div>
         </div>
     );
 }
+
