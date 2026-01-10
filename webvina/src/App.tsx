@@ -7,6 +7,8 @@ import { ExistingOutputPanel } from './ui/components/ExistingOutputPanel';
 import { RunningPanel } from './ui/components/RunningPanel';
 import { OutputPanel } from './ui/components/OutputPanel';
 import { ProjectPanel } from './ui/components/ProjectPanel';
+import { BatchPanel } from './ui/components/BatchPanel';
+import { LandingPanel } from './ui/components/LandingPanel';
 import { MoleculeViewer } from './ui/components/MoleculeViewer';
 import { DraggablePanel } from './ui/components/DraggablePanel';
 import { FloatingToolbar } from './ui/components/FloatingToolbar'; // Keep toolbar
@@ -37,6 +39,12 @@ function App() {
         return (
           <DraggablePanel title="Input Parameters" width="450px" initialX={60} initialY={80}>
             <InputPanel />
+          </DraggablePanel>
+        );
+      case 'batch':
+        return (
+          <DraggablePanel title="Batch Docking" width="600px" initialX={60} initialY={80}>
+            <BatchPanel />
           </DraggablePanel>
         );
       case 'existing':
@@ -77,9 +85,15 @@ function App() {
 
       {/* LAYER 1: UI OVERLAY */}
       <div className="ui-overlay-layer">
-        <Sidebar />
-        <FloatingToolbar />
-        {renderActivePanel()}
+        {activeTab === 'landing' ? (
+          <LandingPanel />
+        ) : (
+          <>
+            <Sidebar />
+            <FloatingToolbar />
+            {renderActivePanel()}
+          </>
+        )}
       </div>
     </div>
   );

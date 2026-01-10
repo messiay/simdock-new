@@ -3,19 +3,21 @@
  * Converts SDF/MOL format to PDBQT format for docking
  */
 
-export function sdfToPdbqt(sdfContent: string): string {
+export function sdfToPdbqt(sdfContent: string): string | null {
     const lines = sdfContent.split('\n');
 
     if (lines.length < 5) {
         console.warn('[sdfConverter] SDF too short');
-        return sdfContent;
+        return null;
     }
 
     // Parse SDF header - atom count is in line 4 (0-indexed line 3)
     const countsLine = lines[3];
     if (!countsLine || countsLine.length < 6) {
+        // Try searching for counts line (sometimes header is longer?)
+        // V2000 standard says line 4, but let's be safe: look for "V2000" or similar structure
         console.warn('[sdfConverter] Invalid counts line');
-        return sdfContent;
+        return null; // Strict for now
     }
 
     const atoms: { x: number; y: number; z: number; symbol: string }[] = [];
@@ -23,7 +25,7 @@ export function sdfToPdbqt(sdfContent: string): string {
 
     if (isNaN(atomCount) || atomCount <= 0) {
         console.warn('[sdfConverter] Invalid atom count:', atomCount);
-        return sdfContent;
+        return null;
     }
 
     // Parse atoms (start at line 5 / index 4)
@@ -42,7 +44,7 @@ export function sdfToPdbqt(sdfContent: string): string {
 
     if (atoms.length === 0) {
         console.warn('[sdfConverter] No atoms parsed from SDF');
-        return sdfContent;
+        return null;
     }
 
     console.info(`[sdfConverter] Converted ${atoms.length} atoms from SDF to PDBQT`);
@@ -81,7 +83,7 @@ export function convertToViewableFormat(content: string, format: string): string
     }
 
     if (format === 'sdf' || format === 'mol' || format === 'sd' || isSdfFormat(content)) {
-        return sdfToPdbqt(content);
+        return sdfToPdbqt(content) || content; // Fallback to content if failed
     }
 
     // For other formats, return as-is and let viewer handle

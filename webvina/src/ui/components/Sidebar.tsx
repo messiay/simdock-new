@@ -13,7 +13,8 @@ import {
     RotateCcw,
     Database,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Layers
 } from 'lucide-react';
 import '../styles/Sidebar.css';
 
@@ -33,6 +34,7 @@ export function Sidebar() {
     const tabs: TabConfig[] = [
         { id: 'prep', label: 'Molecule Import', icon: <TestTube2 size={20} /> },
         { id: 'input', label: 'Input Parameters', icon: <ClipboardList size={20} /> },
+        { id: 'batch', label: 'Batch Mode', icon: <Layers size={20} /> },
         { id: 'existing', label: 'Existing Output', icon: <FolderOpen size={20} /> },
         { id: 'running', label: 'Running Docking', icon: <PlayCircle size={20} />, disabled: () => !isRunning },
         { id: 'output', label: 'Output', icon: <BarChart3 size={20} />, disabled: () => !result },

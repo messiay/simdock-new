@@ -69,7 +69,7 @@ export interface DockingState {
 }
 
 // Tab definitions
-export type TabId = 'prep' | 'input' | 'existing' | 'running' | 'output';
+export type TabId = 'landing' | 'prep' | 'input' | 'existing' | 'running' | 'output' | 'projects' | 'batch';
 
 export interface TabDefinition {
     id: TabId;

@@ -78,7 +78,7 @@ export const useDockingStore = create<DockingStore>()(
             viewMode: 'cartoon',
             resetViewTrigger: 0,
 
-            activeTab: 'input',
+            activeTab: 'landing',
 
             // Visual Settings Defaults
             showBox: true,
@@ -129,7 +129,7 @@ export const useDockingStore = create<DockingStore>()(
                 consoleOutput: [],
                 result: null,
                 selectedPose: 0,
-                activeTab: 'input',
+                activeTab: 'landing',
                 viewMode: 'cartoon',
                 resetViewTrigger: 0,
                 showBox: true,
@@ -164,7 +164,7 @@ export const useDockingStore = create<DockingStore>()(
                 showAxes: state.showAxes,
                 theme: state.theme,
             }),
-            version: 2, // Clear old state to remove bloated files
+            version: 3, // Clear old state to ensure Landing Screen loads
         }
     )
 );

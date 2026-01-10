@@ -40,7 +40,8 @@
 .input-panel,
 .output-workspace-panel,
 .floating-toolbar,
-.save-modal-overlay {
+.save-modal-overlay,
+.landing-overlay {
   pointer-events: auto;
 }
 
