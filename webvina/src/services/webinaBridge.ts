@@ -258,4 +258,6 @@ export async function runWebinaVina(
             reject(e);
         }
     });
+
+    return executionPromise;
 }
