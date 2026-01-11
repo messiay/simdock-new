@@ -140,9 +140,9 @@ export async function runWebinaVina(
         const err = (text: string) => {
             console.warn(`[WebinaBridge] ${text}`);
             // Also log stderr to stdout/diary for visibility
-            if (callbacks?.onStderr) callbacks.onStderr(msg);
+            if (callbacks?.onStderr) callbacks.onStderr(text);
             // And to stdout callback too usually?
-            if (callbacks?.onStdout) callbacks.onStdout(`ERROR: ${msg}`);
+            if (callbacks?.onStdout) callbacks.onStdout(`ERROR: ${text}`);
         };
 
         log("Starting Webina Vina...");
