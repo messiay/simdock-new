@@ -1,73 +1,78 @@
-# React + TypeScript + Vite
+# SimDock Pro 🧬
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🚀 Browser-Based Molecular Docking
 
-Currently, two official plugins are available:
+SimDock Pro is a high-performance, completely browser-based molecular docking application that powers drug discovery workflows directly in your web browser. It leverages **WebAssembly (WASM)** to run the industry-standard **AutoDock Vina** engine client-side, eliminating the need for complex backend infrastructure.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-3.1-green)
+![Status](https://img.shields.io/badge/status-Alpha-orange)
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ✨ Features
 
-## Expanding the ESLint configuration
+- **Client-Side Docking**: Runs AutoDock Vina v1.2.3 compiled to WebAssembly (WASM).
+- **Zero Install**: No local software installation required—just a modern web browser.
+- **Privacy First**: All calculations happen locally on your device; no molecular data is sent to a cloud server.
+- **Format Support**:
+  - **Receptors**: PDB
+  - **Ligands**: PDBQT, SDF (via OpenBabel JS), SMILES (via RDKit JS)
+- **Advanced Visualization**: Integrated 3Dmol.js for interaction and analysis.
+- **Mission Log**: "Diary" style logging of all docking steps and output.
+- **Project Library**: Save and manage docking projects locally using IndexedDB.
+- **Smart PDBQT**: Automatic cleanup and preparation of input files.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🛠️ Architecture
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The application is built on a modern React stack:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Frontend**: React 19 + TypeScript + Vite
+- **State Management**: Zustand
+- **Computation**:
+  - **Vina WASM**: Custom Emscripten build of AutoDock Vina.
+  - **Web Workers**: Off-main-thread processing (currently single-threaded for stability).
+  - **Virtual FS**: Emscripten MEMFS for file handling.
+- **Cheminformatics**:
+  - **RDKit**: SMILES to 3D generation.
+  - **OpenBabel**: File format conversion (SDF -> PDBQT).
+- **Storage**: IndexedDB (via `idb` wrapper) for persisting projects and results.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 📦 Installation
+
+Prerequisites: Node.js (v18+)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/messiay/simdock-new.git
+cd simdock-new/webvina
+
+# 2. Install dependencies
+npm install
+
+# 3. Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The application will be available at `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🧪 Usage
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1.  **Prep**: Import a receptor (PDB ID or file) and ligand (PubChem CID, SMILES, or file).
+2.  **Input**: Configure the grid box (`--center_x`, `--size_x`, etc.) visually.
+3.  **Dock**: Click "Start Docking". The Vina engine runs in the browser.
+4.  **Analyze**: View the docking poses, binding affinities, and interaction details.
+
+## ⚠️ Known Issues
+
+- **Multithreading**: Due to browser security restrictions on `SharedArrayBuffer` (COOP/COEP headers), multithreading is currently disabled (`cpu=1`) to prevent runtime crashes (Error 280032).
+- **Performance**: Large search spaces (high exhaustiveness) can be slow on older devices.
+
+## 🤝 Contributing
+
+1.  Fork the repository.
+2.  Create a feature branch.
+3.  Submit a Pull Request.
+
+---
+*Powered by AutoDock Vina, Emscripten, and React.*
