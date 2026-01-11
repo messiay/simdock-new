@@ -177,8 +177,21 @@ export async function runWebinaVina(
         };
 
         // Start the job
+        // Start the job
         const args = convertParamsToVinaArgs(params);
         callbacks?.onProgress?.("Initializing Worker...", 5);
+
+        // Environment Diagnostics
+        const isSecure = typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : false;
+        const diagMsg = `[Diagnostics] Secure Context: ${isSecure}, SAB: ${typeof SharedArrayBuffer}`;
+        console.log(diagMsg);
+        if (callbacks?.onStdout) callbacks.onStdout(diagMsg);
+
+        if (!isSecure) {
+            const warning = "WARNING: App is NOT crossOriginIsolated. Multi-threading WILL fail.";
+            console.warn(warning);
+            if (callbacks?.onStdout) callbacks.onStdout(warning);
+        }
 
         // Init then Run
         activeWorker!.postMessage({
