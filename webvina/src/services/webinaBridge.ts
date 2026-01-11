@@ -2,14 +2,12 @@ import type { DockingResult, DockingPose } from '../core/types';
 import type { DockingParams } from '../types';
 
 // ============================================================================
-// WEBINA BRIDGE - Ported from Source WebinaService.ts
+// WEBINA BRIDGE - Worker Based
 // ============================================================================
 
-const WASM_BASE = "/webina/"; // Location of vina.js in public/webina/
-
 export interface WebinaCallbacks {
-    onDone: (outTxt: string, stdOut: string, stdErr: string) => void;
-    onError: (error: any) => void;
+    onDone?: (outTxt: string, stdOut: string, stdErr: string) => void;
+    onError?: (error: any) => void;
     onStdout?: (text: string) => void;
     onStderr?: (text: string) => void;
     onProgress?: (msg: string, percent: number) => void;
@@ -19,7 +17,6 @@ export interface WebinaCallbacks {
 function convertParamsToVinaArgs(params: DockingParams): string[] {
     const args: string[] = [];
 
-    // Helper to add arg
     const add = (flag: string, val: any) => {
         args.push(`--${flag}`);
         args.push(val.toString());
@@ -35,14 +32,8 @@ function convertParamsToVinaArgs(params: DockingParams): string[] {
     add('num_modes', params.numModes || 9);
     add('energy_range', params.energyRange || 3);
 
-    if (params.seed) {
-        add('seed', params.seed);
-    }
-
-    // Force CPU to 1 to prevent worker crash 280032 (EAGAIN)
-    // This seems to be a limitation of the current WASM build or environment
-    // params.cpus passed from UI is ignored for stability
-    add('cpu', 1);
+    if (params.seed) add('seed', params.seed);
+    add('cpu', 1); // Still force 1 for consistency initially
 
     return args;
 }
@@ -84,21 +75,16 @@ function parseVinaOutput(output: string, pdbqtOutput: string): DockingResult {
         }
     }
 
-    // Split PDBQT poses
     if (pdbqtOutput) {
-        // Simple splitter based on MODEL/ENDMDL
         const models = pdbqtOutput.split("MODEL");
-        // Skip pre-MODEL content (remarks)
         let poseIndex = 0;
         for (let i = 1; i < models.length; i++) {
-            // Re-add MODEL tag
             const modelContent = "MODEL" + models[i];
             if (modelContent.includes("ENDMDL") && poseIndex < poses.length) {
                 poses[poseIndex].pdbqt = modelContent;
                 poseIndex++;
             }
         }
-        // Fallback: if only one pose and no MODEL tags, or if parsing failed
         if (poses.length > 0 && poses[0].pdbqt === '') {
             poses[0].pdbqt = pdbqtOutput;
         }
@@ -111,6 +97,7 @@ function parseVinaOutput(output: string, pdbqtOutput: string): DockingResult {
     };
 }
 
+let activeWorker: Worker | null = null;
 
 export async function runWebinaVina(
     receptorPdbqt: string,
@@ -119,145 +106,97 @@ export async function runWebinaVina(
     callbacks?: WebinaCallbacks
 ): Promise<DockingResult> {
 
-    // Create the main execution promise
-    const executionPromise = new Promise<DockingResult>(async (resolve, reject) => {
+    // Terminate existing worker if any (brutal restart to ensure clean state)
+    if (activeWorker) {
+        activeWorker.terminate();
+    }
+
+    // Create new Worker
+    activeWorker = new Worker(new URL('./webina.worker.ts', import.meta.url), { type: 'module' });
+
+    return new Promise<DockingResult>((resolve, reject) => {
         let capturedStdout = '';
         let capturedStderr = '';
-        let initializedObj: any = null;
 
-        // Safety Timeout (45 seconds)
+        const TIMEOUT_MS = 60000; // 60s timeout
         const timeoutId = setTimeout(() => {
-            const errorMsg = "Vina execution timed out after 45 seconds. This might be due to a worker crash or infinite loop.";
-            console.error(errorMsg);
-            if (callbacks?.onProgress) callbacks.onProgress(errorMsg, 0);
-            reject(new Error(errorMsg));
-        }, 45000);
+            if (activeWorker) activeWorker.terminate();
+            const msg = `Docking timed out after ${TIMEOUT_MS / 1000}s`;
+            if (callbacks?.onStderr) callbacks.onStderr(msg);
+            reject(new Error(msg));
+        }, TIMEOUT_MS);
 
-        const log = (text: string) => {
-            console.log(`[WebinaBridge] ${text}`);
-            if (callbacks?.onStdout) callbacks.onStdout(text);
-        };
-        const err = (text: string) => {
-            console.warn(`[WebinaBridge] ${text}`);
-            // Also log stderr to stdout/diary for visibility
-            if (callbacks?.onStderr) callbacks.onStderr(text);
-            // And to stdout callback too usually?
-            if (callbacks?.onStdout) callbacks.onStdout(`ERROR: ${text}`);
-        };
+        activeWorker!.onmessage = (e) => {
+            const { type, payload } = e.data;
 
-        log("Starting Webina Vina...");
-
-        // Perform SharedArrayBuffer check
-        if (typeof SharedArrayBuffer === "undefined") {
-            err("CRITICAL: SharedArrayBuffer is NOT available. Multithreading will fail.");
-        } else {
-            log("SharedArrayBuffer is available.");
-        }
-
-        try {
-            // Dynamic Import of vina.js
-            /* @vite-ignore */
-            const mod = await import(`${WASM_BASE}vina.js?t=${Date.now()}`);
-            const moduleFactory = mod.default;
-
-            if (!moduleFactory) {
-                throw new Error("vina.js default export not found");
-            }
-
-            callbacks?.onProgress?.("Initializing Engine...", 10);
-
-            const webinaMod = await moduleFactory({
-                logReadFiles: true,
-                noInitialRun: true,
-                // Preventing Pthread pool creation to avoid 280032 (EAGAIN)
-                PTHREAD_POOL_SIZE: 0,
-                PTHREAD_POOL_SIZE_STRICT: 0,
-                locateFile: (path: string) => {
-                    const cacheBuster = Date.now();
-                    log(`locateFile: ${path}?t=${cacheBuster}`);
-                    return `${WASM_BASE}${path}?t=${cacheBuster}`;
-                },
-                preRun: [
-                    (This: any) => {
-                        log("preRun: Writing input files to virtual FS");
-                        try {
-                            This.FS.writeFile("/receptor.pdbqt", receptorPdbqt);
-                            This.FS.writeFile("/ligand.pdbqt", ligandPdbqt);
-                            initializedObj = This;
-                        } catch (e) {
-                            err(`FS Write Error: ${e}`);
-                        }
-                    }
-                ],
-                print: (text: string) => {
-                    log(text);
-                    capturedStdout += text + "\n";
-
-                    // Simple progress heuristics
-                    if (text.includes('Computing Vina grid')) callbacks?.onProgress?.("Grid calculation...", 20);
-                    if (text.includes('Performing docking')) callbacks?.onProgress?.("Docking...", 50);
-                    if (text.includes('Refining results')) callbacks?.onProgress?.("Refining...", 90);
-                },
-                printErr: (text: string) => { // Line 201
-                    err(text);
-                    capturedStderr += text + "\n";
-                },
-                onExit: (_code: number) => {
-                    clearTimeout(timeoutId); // Stop the timer
-                    console.log("[WebinaBridge] Vina exited with code", _code);
-                    if (_code !== 0) {
-                        err(`Vina exited with error code ${_code}`);
-                    }
-
-                    let outTxt = "";
-                    if (initializedObj) {
-                        try {
-                            outTxt = initializedObj.FS.readFile("/output.pdbqt", { encoding: "utf8" });
-                            log(`Read output file: ${outTxt.length} bytes`);
-                        } catch (e) {
-                            err("Could not read /output.pdbqt (maybe no poses found?)");
-                        }
-                    }
-
-                    const result = parseVinaOutput(capturedStdout, outTxt);
-                    resolve(result);
-                }
-            });
-
-            callbacks?.onProgress?.("Engine Ready. Starting Job...", 15);
-
-            // Construct Args
-            const args = convertParamsToVinaArgs(params);
-            args.push('--receptor', '/receptor.pdbqt');
-            args.push('--ligand', '/ligand.pdbqt');
-            args.push('--out', '/output.pdbqt');
-
-            log(`Running with args: ${args.join(' ')}`);
-
-            // Execute
             try {
-                webinaMod.callMain(args);
-                // Note: callMain might be async or return immediately depending on build (Atomic vs not)
-                // But Vina usually runs blocking on main thread IF pthreads not active, 
-                // OR returns and runs in background if pthreads active?
-                // Source WebinaService.ts didn't await callMain, but relied on callbacks? 
-                // Actually Source Service just called callMain and didn't wait. 
-                // BUT it relied on 'onExit'.
-
-            } catch (e) {
-                // Vina exit() throws a clean exception in some emscripten builds
-                if ((e as any).name === "ExitStatus") {
-                    // Handled in onExit
-                } else {
-                    throw e;
+                switch (type) {
+                    case 'init_complete':
+                        if (callbacks?.onProgress) callbacks.onProgress("Engine Initialized", 10);
+                        break;
+                    case 'stdout':
+                        console.log(`[Worker] ${payload}`);
+                        capturedStdout += payload + '\n';
+                        if (callbacks?.onStdout) callbacks.onStdout(payload);
+                        break;
+                    case 'stderr':
+                        console.warn(`[Worker] ${payload}`);
+                        capturedStderr += payload + '\n';
+                        if (callbacks?.onStderr) callbacks.onStderr(payload);
+                        // Also log stderr to stdout for visibility in diary
+                        if (callbacks?.onStdout) callbacks.onStdout(`[ERR] ${payload}`);
+                        break;
+                    case 'progress':
+                        if (callbacks?.onProgress) callbacks.onProgress(payload.message, payload.percent);
+                        break;
+                    case 'error':
+                        console.error(`[Worker Error] ${payload}`);
+                        if (callbacks?.onError) callbacks.onError(payload);
+                        clearTimeout(timeoutId);
+                        activeWorker?.terminate();
+                        reject(new Error(payload));
+                        break;
+                    case 'done':
+                        clearTimeout(timeoutId);
+                        const result = parseVinaOutput(capturedStdout, payload.pdbqt);
+                        activeWorker?.terminate();
+                        activeWorker = null;
+                        resolve(result);
+                        break;
                 }
+            } catch (err) {
+                console.error("Error processing worker message", err);
+                reject(err);
             }
+        };
 
-        } catch (e) {
-            err(`Critical Error: ${e}`);
-            reject(e);
-        }
+        activeWorker!.onerror = (err) => {
+            clearTimeout(timeoutId);
+            console.error("Worker generic error", err);
+            reject(new Error("Worker failed silently or crashed"));
+        };
+
+        // Start the job
+        const args = convertParamsToVinaArgs(params);
+        callbacks?.onProgress?.("Initializing Worker...", 5);
+
+        // Init then Run
+        activeWorker!.postMessage({
+            type: 'run',
+            payload: {
+                receptor: receptorPdbqt,
+                ligand: ligandPdbqt,
+                args: args
+            }
+        });
     });
+}
 
-    return executionPromise;
+// Add simple abort function
+export function abortDocking() {
+    if (activeWorker) {
+        activeWorker.terminate();
+        activeWorker = null;
+        console.log("Docking aborted by user.");
+    }
 }
