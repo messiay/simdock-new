@@ -119,17 +119,26 @@ export async function runWebinaVina(
     callbacks?: WebinaCallbacks
 ): Promise<DockingResult> {
 
-    return new Promise(async (resolve, reject) => {
-        let initializedObj: any = undefined;
-        let stdOut = "";
-        let stdErr = "";
+    // Create the main execution promise
+    const executionPromise = new Promise<DockingResult>(async (resolve, reject) => {
+        let capturedStdout = '';
+        let capturedStderr = '';
+        let initializedObj: any = null;
 
-        const log = (msg: string) => {
-            console.log(`[WebinaBridge] ${msg}`);
-            if (callbacks?.onStdout) callbacks.onStdout(msg);
+        // Safety Timeout (45 seconds)
+        const timeoutId = setTimeout(() => {
+            const errorMsg = "Vina execution timed out after 45 seconds. This might be due to a worker crash or infinite loop.";
+            console.error(errorMsg);
+            if (callbacks?.onProgress) callbacks.onProgress(errorMsg, 0);
+            reject(new Error(errorMsg));
+        }, 45000);
+
+        const log = (text: string) => {
+            console.log(`[WebinaBridge] ${text}`);
+            if (callbacks?.onStdout) callbacks.onStdout(text);
         };
-        const err = (msg: string) => {
-            console.warn(`[WebinaBridge] ${msg}`);
+        const err = (text: string) => {
+            console.warn(`[WebinaBridge] ${text}`);
             // Also log stderr to stdout/diary for visibility
             if (callbacks?.onStderr) callbacks.onStderr(msg);
             // And to stdout callback too usually?
@@ -164,8 +173,9 @@ export async function runWebinaVina(
                 PTHREAD_POOL_SIZE: 0,
                 PTHREAD_POOL_SIZE_STRICT: 0,
                 locateFile: (path: string) => {
-                    log(`locateFile: ${path}`);
-                    return `${WASM_BASE}${path}`;
+                    const cacheBuster = Date.now();
+                    log(`locateFile: ${path}?t=${cacheBuster}`);
+                    return `${WASM_BASE}${path}?t=${cacheBuster}`;
                 },
                 preRun: [
                     (This: any) => {
@@ -181,21 +191,22 @@ export async function runWebinaVina(
                 ],
                 print: (text: string) => {
                     log(text);
-                    stdOut += text + "\n";
+                    capturedStdout += text + "\n";
 
                     // Simple progress heuristics
                     if (text.includes('Computing Vina grid')) callbacks?.onProgress?.("Grid calculation...", 20);
                     if (text.includes('Performing docking')) callbacks?.onProgress?.("Docking...", 50);
                     if (text.includes('Refining results')) callbacks?.onProgress?.("Refining...", 90);
                 },
-                printErr: (text: string) => {
+                printErr: (text: string) => { // Line 201
                     err(text);
-                    stdErr += text + "\n";
+                    capturedStderr += text + "\n";
                 },
-                onExit: (code: number) => {
-                    log(`Engine exited with code ${code}`);
-                    if (code !== 0) {
-                        err(`Vina exited with error code ${code}`);
+                onExit: (_code: number) => {
+                    clearTimeout(timeoutId); // Stop the timer
+                    console.log("[WebinaBridge] Vina exited with code", _code);
+                    if (_code !== 0) {
+                        err(`Vina exited with error code ${_code}`);
                     }
 
                     let outTxt = "";
@@ -208,7 +219,7 @@ export async function runWebinaVina(
                         }
                     }
 
-                    const result = parseVinaOutput(stdOut, outTxt);
+                    const result = parseVinaOutput(capturedStdout, outTxt);
                     resolve(result);
                 }
             });
