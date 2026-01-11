@@ -52,7 +52,7 @@ export function PrepPanel() {
     // SMILES state
     const [smilesInput, setSmilesInput] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isInitializing, setIsInitializing] = useState(false);
+
     const [error, setError] = useState<string | null>(null);
     const [svgDepiction, setSvgDepiction] = useState<string | null>(null);
     const [properties, setProperties] = useState<MolecularProperties | null>(null);
@@ -102,7 +102,7 @@ export function PrepPanel() {
         const result = await pdbService.fetchPDB(pdbInput.trim());
 
         if (result.success && result.content) {
-            setPdbResult({ title: result.title || result.pdbId || 'Unknown', content: result.content });
+            setPdbResult({ title: result.title || (result as any).pdbId || 'Unknown', content: result.content });
         } else {
             setPdbError(result.error || 'Failed to fetch PDB');
         }

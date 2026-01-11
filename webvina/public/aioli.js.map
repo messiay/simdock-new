@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		
+		<link href="../_app/immutable/assets/Offcanvas.60614438.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/2.05a7cc04.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/5.6838bfef.css" rel="stylesheet"><title>Packages</title><!-- HEAD_svelte-13cmugy_START --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css"><!-- HEAD_svelte-13cmugy_END --><!-- HEAD_svelte-1az6e94_START --><!-- HEAD_svelte-1az6e94_END -->
+	</head>
+	<body>
+		<div>
+
+
+
+
+
+
+
+<nav class="navbar navbar-expand-md navbar-light bg-light"><div class="container"><a class="navbar-brand" href="/"><img alt="biowasm logo" height="40" src="/logo.png">
+		biowasm
+	</a>
+	<button class="navbar-toggler btn btn-secondary" value="" style="">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+	
+
+</div></nav>
+
+
+<div class="mt-4 container">
+
+<h4><nav class=""><ol class="breadcrumb"><li class="breadcrumb-item">Packages</li>
+
+		
+
+		</ol></nav></h4>
+
+<table class="table table-hover"><thead><tr><th width="20%">Name</th>
+			<th>Description</th>
+			<th width="10%">Latest</th>
+			<th width="10%">Downloads</th></tr></thead>
+	<tbody>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">aioli</td>
+				<td class="svelte-1b7yqf4">JavaScript library for running biowasm tools</td>
+				<td class="svelte-1b7yqf4">3.2.1</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">ASTER</td>
+				<td class="svelte-1b7yqf4">Accurate Species Tree EstimatoR</td>
+				<td class="svelte-1b7yqf4">1.23</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">bcftools</td>
+				<td class="svelte-1b7yqf4">Parse .vcf / .bcf variant calling files</td>
+				<td class="svelte-1b7yqf4">1.10</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">bedtools</td>
+				<td class="svelte-1b7yqf4">Parse .bed files and perform complex genome arithmetic</td>
+				<td class="svelte-1b7yqf4">2.31.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">bhtsne</td>
+				<td class="svelte-1b7yqf4">Run the t-SNE dimensionality-reduction algorithm</td>
+				<td class="svelte-1b7yqf4">2016.08.22</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">bowtie2</td>
+				<td class="svelte-1b7yqf4">Align sequencing reads (.fastq) files to a reference genome</td>
+				<td class="svelte-1b7yqf4">2.4.2</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">cawlign</td>
+				<td class="svelte-1b7yqf4">Align/map sequences in a FASTA file to a reference sequence in a codon-aware manner</td>
+				<td class="svelte-1b7yqf4">0.1.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">coreutils</td>
+				<td class="svelte-1b7yqf4">Bash utilities such as head, tail, ls, sort, uniq, etc.</td>
+				<td class="svelte-1b7yqf4">8.32</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">fastp</td>
+				<td class="svelte-1b7yqf4">Evaluate data quality of .fastq files</td>
+				<td class="svelte-1b7yqf4">0.20.1</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">findutils</td>
+				<td class="svelte-1b7yqf4">Search for files in a folder</td>
+				<td class="svelte-1b7yqf4">4.9.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">fasttree</td>
+				<td class="svelte-1b7yqf4">Build phylogenetic trees from multiple sequence alignments</td>
+				<td class="svelte-1b7yqf4">2.1.11</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">gawk</td>
+				<td class="svelte-1b7yqf4">Manipulate data files with patterns of interest</td>
+				<td class="svelte-1b7yqf4">5.1.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">gfatools</td>
+				<td class="svelte-1b7yqf4">Tools for manipulating pangenome sequence graphs</td>
+				<td class="svelte-1b7yqf4">253</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">gffread</td>
+				<td class="svelte-1b7yqf4">Parse and file .gff/.gtf files</td>
+				<td class="svelte-1b7yqf4">0.12.7</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">grep</td>
+				<td class="svelte-1b7yqf4">Search and filter files</td>
+				<td class="svelte-1b7yqf4">3.7</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">htslib</td>
+				<td class="svelte-1b7yqf4">Bioinformatics file format utilities: tabix, htsfile, and bgzip</td>
+				<td class="svelte-1b7yqf4">1.21</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">hyphy</td>
+				<td class="svelte-1b7yqf4">Comparative sequence analysis using stochastic evolutionary models</td>
+				<td class="svelte-1b7yqf4">2.5.57</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">ivar</td>
+				<td class="svelte-1b7yqf4">Tools for viral amplicon-based sequencing</td>
+				<td class="svelte-1b7yqf4">1.3.1</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">jq</td>
+				<td class="svelte-1b7yqf4">Filter and wrangle JSON strings</td>
+				<td class="svelte-1b7yqf4">1.7</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">kalign</td>
+				<td class="svelte-1b7yqf4">Multiple sequence alignment</td>
+				<td class="svelte-1b7yqf4">3.3.1</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">kentutils</td>
+				<td class="svelte-1b7yqf4">File conversion utilities</td>
+				<td class="svelte-1b7yqf4">437</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">libarchive</td>
+				<td class="svelte-1b7yqf4">Unzip .zip files</td>
+				<td class="svelte-1b7yqf4">3.7.2</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">lsd2</td>
+				<td class="svelte-1b7yqf4">A phylogeny dating method</td>
+				<td class="svelte-1b7yqf4">2.3</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">mafft</td>
+				<td class="svelte-1b7yqf4">Multiple sequence alignment for amino acid or nucleotide sequences</td>
+				<td class="svelte-1b7yqf4">7.520</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">minimap2</td>
+				<td class="svelte-1b7yqf4">Pairwise sequence alignment</td>
+				<td class="svelte-1b7yqf4">2.22</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">modbam2bed</td>
+				<td class="svelte-1b7yqf4">Summarize .bam modified bases as .bed files with counts</td>
+				<td class="svelte-1b7yqf4">0.9.5</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">mummer4</td>
+				<td class="svelte-1b7yqf4">Rapidly align entire genomes</td>
+				<td class="svelte-1b7yqf4">4.0.0rc1</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">muscle</td>
+				<td class="svelte-1b7yqf4">Multiple alignments of biological sequences</td>
+				<td class="svelte-1b7yqf4">5.1.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">samtools</td>
+				<td class="svelte-1b7yqf4">Parse .sam / .bam read alignment files</td>
+				<td class="svelte-1b7yqf4">1.21</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">sed</td>
+				<td class="svelte-1b7yqf4">Find and replace utilities</td>
+				<td class="svelte-1b7yqf4">4.8</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">seq-align</td>
+				<td class="svelte-1b7yqf4">Align sequences using Smith-Waterman/Needleman-Wunsch</td>
+				<td class="svelte-1b7yqf4">2017.10.18</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">seqtk</td>
+				<td class="svelte-1b7yqf4">Parse and wrangle .fasta / .fastq files</td>
+				<td class="svelte-1b7yqf4">1.4</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">ssw</td>
+				<td class="svelte-1b7yqf4">A SIMD implementation of the Smith-Waterman algorithm</td>
+				<td class="svelte-1b7yqf4">1.2.4</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">tn93</td>
+				<td class="svelte-1b7yqf4">Pairwise distance on FASTA files using Tamura Nei 93 distance</td>
+				<td class="svelte-1b7yqf4">1.0.11</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">tree</td>
+				<td class="svelte-1b7yqf4">List folder contents in a tree format</td>
+				<td class="svelte-1b7yqf4">2.0.4</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">ViralConsensus</td>
+				<td class="svelte-1b7yqf4">Call viral consensus genomes from read alignments</td>
+				<td class="svelte-1b7yqf4">1.0.0</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr>
+			<tr><td class="text-primary fw-bold svelte-1b7yqf4">wgsim</td>
+				<td class="svelte-1b7yqf4">Simulate short reads from a reference genome</td>
+				<td class="svelte-1b7yqf4">2011.10.17</td>
+				<td class="svelte-1b7yqf4">0</td>
+			</tr></tbody></table></div>
+
+
+			
+			<script>
+				{
+					__sveltekit_ni78d2 = {
+						base: new URL("..", location).pathname.slice(0, -1),
+						env: {}
+					};
+
+					const element = document.currentScript.parentElement;
+
+					const data = [null,null,null];
+
+					Promise.all([
+						import("../_app/immutable/entry/start.0ded0032.js"),
+						import("../_app/immutable/entry/app.1c9383a0.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 2, 5],
+							data,
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"8488495c90fa440992045431f8b88e13","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

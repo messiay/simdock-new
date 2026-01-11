@@ -1,7 +1,8 @@
 import type { DockingParams, DockingResult } from '../types';
-import { parseVinaOutput } from '../core/utils/vinaOutputParser';
+import { runWebinaVina } from './webinaBridge';
+import { useDockingStore } from '../store/dockingStore';
 
-// Worker message types
+// Worker message types (kept for backward compatibility)
 export interface DockingRequest {
     type: 'dock';
     receptorPdbqt: string;
@@ -28,16 +29,23 @@ export interface DockingError {
 export type WorkerMessage = DockingRequest;
 export type WorkerResponse = DockingProgress | DockingComplete | DockingError;
 
+// Re-export DockingParams from types for convenience
+export type { DockingParams } from '../types';
+
 /**
  * VinaService - Wrapper for the Vina WebAssembly module
- * Uses a Web Worker to run docking in the background
+ * 
+ * Now uses Webina (DurrantLab AutoDock Vina WASM) loaded from main thread.
+ * Webina handles its own internal worker threading via SharedArrayBuffer.
+ * 
+ * This is REAL Vina WASM execution - NO SIMULATION
  */
 class VinaService {
-    private worker: Worker | null = null;
     private isInitialized = false;
+    private abortController: AbortController | null = null;
 
     /**
-     * Initialize the Vina service by loading the WASM module
+     * Initialize the Vina service
      */
     async initialize(): Promise<void> {
         if (this.isInitialized) return;
@@ -52,11 +60,13 @@ class VinaService {
             );
         }
 
+        console.log('[VinaService] Initialized - using Webina (DurrantLab AutoDock Vina WASM)');
         this.isInitialized = true;
     }
 
     /**
-     * Run molecular docking
+     * Run molecular docking using REAL Vina WASM (via Webina)
+     * NO SIMULATION - ALL REAL COMPUTATION
      */
     async runDocking(
         receptorPdbqt: string,
@@ -66,61 +76,36 @@ class VinaService {
     ): Promise<DockingResult> {
         await this.initialize();
 
-        return new Promise((resolve, reject) => {
-            // Create a new worker for this docking run
-            this.worker = new Worker(
-                new URL('../core/workers/dockingWorker.ts', import.meta.url),
-                { type: 'module' }
-            );
+        console.log('[VinaService] Starting REAL Vina WASM docking via Webina');
+        console.log('[VinaService] Receptor size:', receptorPdbqt.length, 'chars');
+        console.log('[VinaService] Ligand size:', ligandPdbqt.length, 'chars');
+        console.log('[VinaService] Parameters:', params);
 
-            this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-                const data = event.data;
-
-                switch (data.type) {
-                    case 'progress':
-                        onProgress?.(data.message, data.progress);
-                        break;
-
-                    case 'complete':
-                        this.cleanupWorker();
-                        resolve(data.result);
-                        break;
-
-                    case 'error':
-                        this.cleanupWorker();
-                        reject(new Error(data.message));
-                        break;
-                }
-            };
-
-            this.worker.onerror = (error) => {
-                this.cleanupWorker();
-                reject(new Error(`Worker error: ${error.message}`));
-            };
-
-            // Send docking request to worker
-            const request: DockingRequest = {
-                type: 'dock',
-                receptorPdbqt,
-                ligandPdbqt,
-                params,
-            };
-
-            this.worker.postMessage(request);
+        // Use Webina bridge for REAL docking
+        return runWebinaVina(receptorPdbqt, ligandPdbqt, params, {
+            onProgress: (msg, pct) => {
+                onProgress?.(msg, pct);
+                // Also log progress to diary
+                useDockingStore.getState().addConsoleOutput(`[PROGRESS] ${msg}`);
+            },
+            onStdout: (msg) => {
+                useDockingStore.getState().addConsoleOutput(msg);
+            },
+            onStderr: (msg) => {
+                useDockingStore.getState().addConsoleOutput(`[STDERR] ${msg}`);
+            }
         });
     }
 
     /**
      * Abort the current docking run
+     * Note: Webina docking cannot be easily aborted once started
      */
     abort(): void {
-        this.cleanupWorker();
-    }
-
-    private cleanupWorker(): void {
-        if (this.worker) {
-            this.worker.terminate();
-            this.worker = null;
+        console.log('[VinaService] Abort requested (note: Webina docking may not be abortable once started)');
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
         }
     }
 }
@@ -128,59 +113,7 @@ class VinaService {
 // Singleton instance
 export const vinaService = new VinaService();
 
-/**
- * Fallback: Run Vina directly without worker (for simpler testing)
- * This simulates a docking run for development purposes
- */
-export async function simulateDocking(
-    _receptorPdbqt: string,
-    ligandPdbqt: string,
-    params: DockingParams,
-    onProgress?: (message: string, progress: number) => void
-): Promise<DockingResult> {
-    // Simulate initialization
-    onProgress?.('Initializing Vina...', 5);
-    await delay(500);
+// NOTE: simulateDocking() has been REMOVED
+// The docking pipeline now ONLY uses real Vina WASM via Webina
+// All computation is real - no synthetic/simulated/fake data
 
-    // Simulate file preparation
-    onProgress?.('Preparing receptor...', 15);
-    await delay(300);
-
-    onProgress?.('Preparing ligand...', 25);
-    await delay(300);
-
-    // Simulate docking
-    for (let i = 0; i < 10; i++) {
-        onProgress?.(`Running docking... (step ${i + 1}/10)`, 30 + i * 6);
-        await delay(200);
-    }
-
-    // Simulate output
-    onProgress?.('Writing output...', 95);
-    await delay(200);
-
-    onProgress?.('Docking complete!', 100);
-
-    // Return simulated results
-    const simulatedOutput = `
-Detected CPU cores: ${params.cpus}
-Using exhaustiveness = ${params.exhaustiveness}
-
-mode |   affinity | dist from best mode
-     | (kcal/mol) | rmsd l.b.| rmsd u.b.
------+------------+----------+----------
-   1       -7.5          0.0          0.0
-   2       -7.2          1.2          2.3
-   3       -6.9          2.1          3.5
-   4       -6.7          1.8          2.9
-   5       -6.4          3.2          4.8
-`;
-
-    const simulatedPdbqt = ligandPdbqt; // In real implementation, this would be the docked poses
-
-    return parseVinaOutput(simulatedOutput, simulatedPdbqt);
-}
-
-function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}

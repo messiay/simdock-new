@@ -1,13 +1,27 @@
-import type { DockingRequest, WorkerResponse } from '../services/vinaService';
+import type { DockingRequest, WorkerResponse } from '../../services/vinaService';
 import type { DockingResult, DockingPose } from '../types';
+import { parseVinaOutput } from '../utils/vinaOutputParser';
 
-// Web Worker for running Vina docking in the background
-// This worker will load the Vina WASM module and execute docking
+// ============================================================================
+// VINA WASM DOCKING WORKER
+// Uses REAL AutoDock Vina WASM binary via Aioli (BioWasm)
+// NO SYNTHETIC OR SIMULATED DATA - ALL REAL COMPUTATIONS
+// ============================================================================
 
-let vinaModule: any = null;
+let CLI: any = null;
+
+// Logging utility with verification prefix
+function logVerify(stage: string, message: string, data?: any): void {
+    const timestamp = new Date().toISOString();
+    console.log(`[VINA_VERIFY][${timestamp}][${stage}] ${message}`);
+    if (data !== undefined) {
+        console.log(`[VINA_VERIFY][${stage}] Data:`, data);
+    }
+}
 
 // Post progress message to main thread
 function postProgress(message: string, progress: number): void {
+    logVerify('PROGRESS', `${progress}% - ${message}`);
     const response: WorkerResponse = {
         type: 'progress',
         message,
@@ -18,6 +32,7 @@ function postProgress(message: string, progress: number): void {
 
 // Post completion message to main thread
 function postComplete(result: DockingResult): void {
+    logVerify('COMPLETE', `Docking completed with ${result.poses.length} poses`);
     const response: WorkerResponse = {
         type: 'complete',
         result,
@@ -27,6 +42,7 @@ function postComplete(result: DockingResult): void {
 
 // Post error message to main thread
 function postError(message: string): void {
+    logVerify('ERROR', message);
     const response: WorkerResponse = {
         type: 'error',
         message,
@@ -34,402 +50,222 @@ function postError(message: string): void {
     self.postMessage(response);
 }
 
-// Initialize Vina WASM module
+// Initialize Aioli and Vina
 async function initializeVina(): Promise<void> {
-    if (vinaModule) return;
+    if (CLI) {
+        logVerify('INIT', 'Vina CLI already initialized, reusing');
+        return;
+    }
 
-    postProgress('Loading Vina WebAssembly module...', 5);
+    logVerify('INIT', 'Starting Aioli/Vina initialization...');
+    postProgress('Initializing BioWasm (Aioli)...', 5);
 
     try {
-        // In production, this would load the actual Vina WASM module
-        // For now, we'll simulate the module
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Check if Aioli is already loaded
+        let Aioli = (self as any).Aioli;
 
-        vinaModule = {
-            initialized: true,
-        };
+        if (!Aioli) {
+            // For module workers, we cannot use importScripts()
+            // Instead, fetch and eval the script
+            logVerify('INIT', 'Fetching aioli.js via fetch (module worker compatible)');
 
-        postProgress('Vina module loaded successfully', 10);
+            const response = await fetch('/aioli.js');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch aioli.js: ${response.status} ${response.statusText}`);
+            }
+            const scriptText = await response.text();
+            logVerify('INIT', `Loaded aioli.js (${scriptText.length} bytes)`);
+
+            // Evaluate the script in global scope
+            // This is safe since aioli.js is a bundled library from our server
+            (0, eval)(scriptText);
+
+            Aioli = (self as any).Aioli;
+        }
+
+        if (!Aioli) {
+            throw new Error('Aioli failed to load - global not found after script evaluation');
+        }
+        logVerify('INIT', 'Aioli global loaded successfully');
+
+        postProgress('Loading AutoDock Vina v1.2.3 from BioWasm CDN...', 10);
+        logVerify('INIT', 'Fetching autodock-vina/1.2.3 WASM from biowasm.com CDN...');
+
+        // Initialize Aioli with AutoDock Vina
+        // This will fetch the wasm from biowasm.com CDN
+        CLI = await new Aioli("autodock-vina/1.2.3", {
+            printInterleaved: false, // Separate stdout/stderr
+            debug: false
+        });
+
+        logVerify('INIT', 'Vina WASM module loaded and ready!');
+        postProgress('Vina engine ready', 15);
     } catch (error) {
-        throw new Error(`Failed to load Vina WASM: ${error}`);
+        logVerify('INIT_ERROR', 'Aioli initialization failed', error);
+        console.error('Aioli Initialization Failed FULL ERROR:', error);
+
+        let errMsg = 'Unknown error';
+        if (error instanceof Error) errMsg = error.message;
+        else if (typeof error === 'string') errMsg = error;
+        else errMsg = JSON.stringify(error);
+
+        throw new Error(`Failed to initialize Vina Engine: ${errMsg}`);
     }
 }
 
-// Run docking simulation (will be replaced with actual WASM calls)
+// Run docking (REAL WASM EXECUTION - NO SIMULATION)
 async function runDocking(request: DockingRequest): Promise<void> {
-    const { receptorPdbqt: _receptorPdbqt, ligandPdbqt, params } = request;
+    logVerify('START', '========== DOCKING JOB STARTED ==========');
+    logVerify('START', 'This is REAL WASM execution, not simulated');
+
+    // Check SharedArrayBuffer requirements
+    if (typeof SharedArrayBuffer === 'undefined') {
+        logVerify('PREREQ', 'CRITICAL: SharedArrayBuffer is not available!');
+        console.error('[Worker] SharedArrayBuffer is missing! COOP/COEP headers likely required.');
+        postError('Browser Error: SharedArrayBuffer is not enabled. Is the server sending COOP/COEP headers?');
+        return;
+    }
+    logVerify('PREREQ', 'SharedArrayBuffer is available ✓');
+
+    const { receptorPdbqt, ligandPdbqt, params } = request;
+
+    // ========== INPUT VALIDATION ==========
+    logVerify('INPUT', '---------- INPUT VALIDATION ----------');
+    logVerify('INPUT', `Receptor PDBQT size: ${receptorPdbqt.length} characters`);
+    logVerify('INPUT', `Ligand PDBQT size: ${ligandPdbqt.length} characters`);
+    logVerify('INPUT', `Receptor first 200 chars: ${receptorPdbqt.substring(0, 200)}`);
+    logVerify('INPUT', `Ligand first 200 chars: ${ligandPdbqt.substring(0, 200)}`);
+
+    // Validate receptor content
+    const receptorHasAtoms = receptorPdbqt.includes('ATOM') || receptorPdbqt.includes('HETATM');
+    logVerify('INPUT', `Receptor contains ATOM/HETATM records: ${receptorHasAtoms}`);
+
+    // Validate ligand content
+    const ligandHasRoot = ligandPdbqt.includes('ROOT');
+    const ligandHasBranch = ligandPdbqt.includes('BRANCH');
+    const ligandHasAtoms = ligandPdbqt.includes('ATOM') || ligandPdbqt.includes('HETATM');
+    logVerify('INPUT', `Ligand has ROOT: ${ligandHasRoot}, BRANCH: ${ligandHasBranch}, ATOMS: ${ligandHasAtoms}`);
+
+    // Log docking parameters
+    logVerify('PARAMS', '---------- DOCKING PARAMETERS ----------');
+    logVerify('PARAMS', `Center: (${params.centerX}, ${params.centerY}, ${params.centerZ})`);
+    logVerify('PARAMS', `Size: (${params.sizeX}, ${params.sizeY}, ${params.sizeZ})`);
+    logVerify('PARAMS', `Exhaustiveness: ${params.exhaustiveness}`);
+    logVerify('PARAMS', `Num Modes: ${params.numModes || 9}`);
 
     try {
         await initializeVina();
 
-        postProgress('Preparing receptor file...', 15);
-        await delay(200);
+        // ========== FILE MOUNTING ==========
+        logVerify('MOUNT', '---------- MOUNTING FILES TO VIRTUAL FS ----------');
+        postProgress('Mounting files to virtual filesystem...', 20);
 
-        postProgress('Preparing ligand file...', 20);
-        await delay(200);
+        await CLI.mount('/receptor.pdbqt', receptorPdbqt);
+        logVerify('MOUNT', 'Mounted /receptor.pdbqt ✓');
 
-        postProgress('Configuring docking parameters...', 25);
-        await delay(100);
+        await CLI.mount('/ligand.pdbqt', ligandPdbqt);
+        logVerify('MOUNT', 'Mounted /ligand.pdbqt ✓');
 
-        // Simulate docking iterations
-        const totalSteps = params.exhaustiveness;
-        for (let i = 0; i < totalSteps; i++) {
-            const progress = 30 + ((i / totalSteps) * 60);
-            postProgress(`Docking iteration ${i + 1}/${totalSteps}...`, progress);
-            await delay(300);
+        postProgress('Configuring parameters...', 25);
+
+        // ========== COMMAND CONSTRUCTION ==========
+        logVerify('CMD', '---------- COMMAND CONSTRUCTION ----------');
+        const args = [
+            '--receptor', '/receptor.pdbqt',
+            '--ligand', '/ligand.pdbqt',
+            '--center_x', params.centerX.toString(),
+            '--center_y', params.centerY.toString(),
+            '--center_z', params.centerZ.toString(),
+            '--size_x', params.sizeX.toString(),
+            '--size_y', params.sizeY.toString(),
+            '--size_z', params.sizeZ.toString(),
+            '--exhaustiveness', params.exhaustiveness.toString(),
+            '--num_modes', (params.numModes || 9).toString(),
+            '--out', '/output.pdbqt',
+            '--cpu', '0'
+        ];
+
+        const cmd = `vina ${args.join(' ')}`;
+        logVerify('CMD', `Full command: ${cmd}`);
+
+        // ========== VINA EXECUTION ==========
+        logVerify('EXEC', '---------- EXECUTING VINA WASM ----------');
+        postProgress('Running AutoDock Vina (REAL WASM computation)...', 30);
+
+        const startTime = performance.now();
+        const output = await CLI.exec(cmd);
+        const endTime = performance.now();
+
+        logVerify('EXEC', `Vina execution completed in ${(endTime - startTime).toFixed(2)}ms`);
+
+        // ========== OUTPUT CAPTURE ==========
+        logVerify('OUTPUT', '---------- VINA OUTPUT ----------');
+        logVerify('OUTPUT', `stdout length: ${output.stdout?.length || 0} chars`);
+        logVerify('OUTPUT', `stderr length: ${output.stderr?.length || 0} chars`);
+        logVerify('OUTPUT', 'STDOUT CONTENT:');
+        console.log(output.stdout);
+        if (output.stderr && output.stderr.length > 0) {
+            logVerify('OUTPUT', 'STDERR CONTENT:');
+            console.log(output.stderr);
         }
 
-        postProgress('Finalizing results...', 95);
-        await delay(200);
+        // Check for results table in stdout
+        const hasResultsTable = output.stdout?.includes('mode |   affinity');
+        logVerify('OUTPUT', `Contains results table (mode | affinity): ${hasResultsTable}`);
 
-        // Generate simulated results with docking box center for proper ligand placement
-        const result = generateSimulatedResults(
-            ligandPdbqt,
-            params.numModes,
-            { x: params.centerX, y: params.centerY, z: params.centerZ }
-        );
+        postProgress('Processing results...', 90);
+
+        // ========== READ OUTPUT FILE ==========
+        logVerify('READ', '---------- READING OUTPUT FILE ----------');
+        const outputPdbqt = await CLI.cat('/output.pdbqt');
+        logVerify('READ', `Output PDBQT size: ${outputPdbqt.length} characters`);
+        logVerify('READ', `Output PDBQT first 500 chars: ${outputPdbqt.substring(0, 500)}`);
+
+        // Validate output
+        const hasVinaResult = outputPdbqt.includes('REMARK VINA RESULT');
+        const hasModels = outputPdbqt.includes('MODEL');
+        logVerify('READ', `Output has REMARK VINA RESULT: ${hasVinaResult}`);
+        logVerify('READ', `Output has MODEL sections: ${hasModels}`);
+
+        // ========== CLEANUP ==========
+        logVerify('CLEANUP', 'Cleaning up virtual filesystem...');
+        await CLI.unlink('/receptor.pdbqt');
+        await CLI.unlink('/ligand.pdbqt');
+        await CLI.unlink('/output.pdbqt');
+        logVerify('CLEANUP', 'Virtual files removed ✓');
+
+        // ========== PARSE RESULTS ==========
+        logVerify('PARSE', '---------- PARSING RESULTS ----------');
+        const result = parseVinaOutput(output.stdout, outputPdbqt);
+        logVerify('PARSE', `Parsed ${result.poses.length} binding poses`);
+
+        if (result.poses.length > 0) {
+            logVerify('PARSE', 'Binding affinities:');
+            result.poses.forEach((pose, idx) => {
+                logVerify('PARSE', `  Mode ${pose.mode}: ${pose.affinity} kcal/mol (RMSD: ${pose.rmsdLB}/${pose.rmsdUB})`);
+            });
+            logVerify('PARSE', `Best affinity: ${result.poses[0].affinity} kcal/mol`);
+        }
+
+        // ========== COMPLETE ==========
+        logVerify('DONE', '========== DOCKING JOB COMPLETED ==========');
+        logVerify('DONE', 'This was REAL Vina WASM computation, not simulated!');
 
         postProgress('Docking complete!', 100);
         postComplete(result);
 
     } catch (error) {
-        postError(`Docking failed: ${error instanceof Error ? error.message : String(error)}`);
+        logVerify('ERROR', '========== DOCKING ERROR ==========');
+        logVerify('ERROR', `Error: ${error instanceof Error ? error.message : String(error)}`);
+        console.error('Docking Error:', error);
+        postError(`Docking execution failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-}
-
-// Generate simulated docking results
-function generateSimulatedResults(
-    ligandPdbqt: string,
-    numModes: number,
-    center: { x: number; y: number; z: number }
-): DockingResult {
-    const poses: DockingPose[] = [];
-
-    // Generate random but plausible binding affinities
-    const baseAffinity = -7.5 - (Math.random() * 2);
-
-    for (let i = 0; i < numModes; i++) {
-        const affinity = baseAffinity + (i * 0.3) + (Math.random() * 0.2);
-        const rmsdLB = i === 0 ? 0 : (Math.random() * 3 + 0.5);
-        const rmsdUB = i === 0 ? 0 : (rmsdLB + Math.random() * 2);
-
-        // Add small random displacement for each pose (simulating different binding orientations)
-        const poseCenter = {
-            x: center.x + (i === 0 ? 0 : (Math.random() - 0.5) * 4),
-            y: center.y + (i === 0 ? 0 : (Math.random() - 0.5) * 4),
-            z: center.z + (i === 0 ? 0 : (Math.random() - 0.5) * 4),
-        };
-
-        poses.push({
-            mode: i + 1,
-            affinity: Math.round(affinity * 10) / 10,
-            rmsdLB: Math.round(rmsdLB * 10) / 10,
-            rmsdUB: Math.round(rmsdUB * 10) / 10,
-            pdbqt: wrapPdbqtAsModel(ligandPdbqt, i + 1, affinity, poseCenter),
-        });
-    }
-
-    // Generate log output
-    const logOutput = generateLogOutput(poses);
-
-    return {
-        poses,
-        rawOutput: poses.map(p => p.pdbqt).join('\n'),
-        logOutput,
-    };
-}
-
-// Convert SDF/MOL content to PDBQT format with coordinate translation
-function sdfToPdbqt(sdfContent: string, center: { x: number; y: number; z: number }): string {
-    const lines = sdfContent.split('\n');
-    const atoms: { x: number; y: number; z: number; symbol: string }[] = [];
-
-    // Parse SDF format: 
-    // Line 1: molecule name
-    // Line 2: program/timestamp info
-    // Line 3: comment
-    // Line 4: counts line (atomCount bondCount ...)
-    // Lines 5+: atom block until 'M  END'
-
-    if (lines.length < 5) {
-        return sdfContent; // Too short, return as-is
-    }
-
-    // Get atom count from counts line (line 4, 0-indexed line 3)
-    const countsLine = lines[3];
-    const atomCount = parseInt(countsLine.substring(0, 3).trim(), 10);
-
-    if (isNaN(atomCount) || atomCount <= 0) {
-        return sdfContent; // Invalid format
-    }
-
-    // First pass: parse all atoms and calculate centroid
-    for (let i = 0; i < atomCount && (i + 4) < lines.length; i++) {
-        const atomLine = lines[i + 4];
-        if (atomLine.length < 34) continue;
-
-        const x = parseFloat(atomLine.substring(0, 10).trim());
-        const y = parseFloat(atomLine.substring(10, 20).trim());
-        const z = parseFloat(atomLine.substring(20, 30).trim());
-        const symbol = atomLine.substring(31, 34).trim();
-
-        if (isNaN(x) || isNaN(y) || isNaN(z)) continue;
-        atoms.push({ x, y, z, symbol });
-    }
-
-    if (atoms.length === 0) {
-        return sdfContent; // Parsing failed
-    }
-
-    // Calculate ligand centroid
-    const centroid = {
-        x: atoms.reduce((sum, a) => sum + a.x, 0) / atoms.length,
-        y: atoms.reduce((sum, a) => sum + a.y, 0) / atoms.length,
-        z: atoms.reduce((sum, a) => sum + a.z, 0) / atoms.length,
-    };
-
-    // Generate PDBQT lines with translated coordinates
-    const pdbqtLines: string[] = [];
-    for (let i = 0; i < atoms.length; i++) {
-        const atom = atoms[i];
-        // Translate: move from original centroid to target center
-        const newX = atom.x - centroid.x + center.x;
-        const newY = atom.y - centroid.y + center.y;
-        const newZ = atom.z - centroid.z + center.z;
-
-        const atomNum = i + 1;
-        const atomName = atom.symbol.padEnd(4);
-        const pdbqtLine = `HETATM${atomNum.toString().padStart(5)} ${atomName} LIG     1    ${newX.toFixed(3).padStart(8)}${newY.toFixed(3).padStart(8)}${newZ.toFixed(3).padStart(8)}  1.00  0.00          ${atom.symbol.padStart(2)}`;
-        pdbqtLines.push(pdbqtLine);
-    }
-
-    return pdbqtLines.join('\n');
-}
-
-// Helper: specific PDB line parser that handles both strict and loose formats
-function smartParsePdbLine(line: string): { x: number, y: number, z: number } | null {
-    // Strategy 1: Strict PDB format (columns 31-38, 39-46, 47-54) (0-indexed 30-38, etc)
-    if (line.length >= 54) {
-        const x = parseFloat(line.substring(30, 38).trim());
-        const y = parseFloat(line.substring(38, 46).trim());
-        const z = parseFloat(line.substring(46, 54).trim());
-        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-            return { x, y, z };
-        }
-    }
-
-    // Strategy 2: Split by whitespace (lenient)
-    // Heuristic: Filter for parts that look like floats. If we find at least 3, assume they are coords.
-    const parts = line.trim().split(/\s+/);
-    const floats: number[] = [];
-
-    for (const part of parts) {
-        // Match numbers with optional doc (e.g. "1.0", "-0.5", "1", "1.")
-        if (/^-?\d*\.\d+$/.test(part) || /^-?\d+\.?$/.test(part)) {
-            const val = parseFloat(part);
-            if (!isNaN(val)) floats.push(val);
-        }
-    }
-
-    // In standard ATOM lines, coordinates are usually the first 3 float-like values after residues?
-    // "ATOM 1 N ALA A 1 10.0 20.0 30.0 1.00 0.00" -> floats: 10.0, 20.0, 30.0, 1.00, 0.00
-    // "ATOM 1 N ALA 1 10.0 20.0 30.0" -> floats: 10.0, 20.0, 30.0
-
-    // We'll take the first 3 floats we found that "look like coordinates" (contain decimal)
-    const coordLikely = parts.filter(p => p.includes('.') && !isNaN(parseFloat(p)));
-    if (coordLikely.length >= 3) {
-        return {
-            x: parseFloat(coordLikely[0]),
-            y: parseFloat(coordLikely[1]),
-            z: parseFloat(coordLikely[2])
-        };
-    }
-
-    // Fallback: just use first 3 numbers if we have them
-    if (floats.length >= 3) {
-        return { x: floats[0], y: floats[1], z: floats[2] };
-    }
-
-    return null;
-}
-
-// Translate PDBQT atom coordinates to a new center
-function translatePdbqt(pdbqtContent: string, center: { x: number; y: number; z: number }): string {
-    const lines = pdbqtContent.split('\n');
-    const atoms: { line: string; x: number; y: number; z: number }[] = [];
-    const otherLines: { index: number; line: string }[] = [];
-
-    // Parse atom lines
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
-            const coords = smartParsePdbLine(line);
-
-            if (coords) {
-                atoms.push({ line, ...coords });
-            } else {
-                otherLines.push({ index: i, line });
-            }
-        } else {
-            otherLines.push({ index: i, line });
-        }
-    }
-
-    if (atoms.length === 0) {
-        return pdbqtContent; // No atoms found, return original
-    }
-
-    // Calculate centroid
-    const centroid = {
-        x: atoms.reduce((sum, a) => sum + a.x, 0) / atoms.length,
-        y: atoms.reduce((sum, a) => sum + a.y, 0) / atoms.length,
-        z: atoms.reduce((sum, a) => sum + a.z, 0) / atoms.length,
-    };
-
-    // Translate atoms
-    const newLines: string[] = [];
-    // Reconstruct file preserving order if possible, but simplest is to just output atoms?
-    // No, we should try to preserve structure (REMARKs, etc).
-
-    // Better strategy: iterate over original lines and replace atoms
-    let atomIndex = 0;
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if ((line.startsWith('ATOM') || line.startsWith('HETATM')) && atomIndex < atoms.length && atoms[atomIndex].line === line) {
-            const atom = atoms[atomIndex];
-            const newX = atom.x - centroid.x + center.x;
-            const newY = atom.y - centroid.y + center.y;
-            const newZ = atom.z - centroid.z + center.z;
-
-            // If line was strict PDB, replace formatted.
-            // If loose, we might need to reconstruct strictly or just replace text?
-            // Safer to output strict PDB format for Vina compatibility.
-
-            // Reconstruct standard PDB line parts
-            // Cols 1-30: usually preserved
-            // Cols 31-54: new coords
-            // Cols 55+: preserved
-
-            let newLine = '';
-
-            if (line.length >= 54) {
-                newLine =
-                    line.substring(0, 30) +
-                    newX.toFixed(3).padStart(8) +
-                    newY.toFixed(3).padStart(8) +
-                    newZ.toFixed(3).padStart(8) +
-                    line.substring(54);
-            } else {
-                // Was loose format. Reconstruct standard ATOM line if possible? 
-                // Or just assume valid PDBQT start and append?
-                // Actually, if input was loose, Vina might have issues unless we standardize it.
-                // Let's force standard formatting for coords.
-                // But we need the first 30 chars.
-                // "ATOM 1 C... " -> use first 30 chars if exist, or pad?
-                const prefix = line.length >= 30 ? line.substring(0, 30) : line.padEnd(30);
-                const suffix = line.length > 54 ? line.substring(54) : ''; // Loose lines might end early
-
-                newLine =
-                    prefix +
-                    newX.toFixed(3).padStart(8) +
-                    newY.toFixed(3).padStart(8) +
-                    newZ.toFixed(3).padStart(8) +
-                    suffix;
-            }
-
-            newLines.push(newLine);
-            atomIndex++;
-        } else {
-            newLines.push(line);
-        }
-    }
-
-    return newLines.join('\n');
-}
-
-function wrapPdbqtAsModel(content: string, modelNum: number, affinity: number, center: { x: number; y: number; z: number }): string {
-    console.log(`[Worker] wrapPdbqtAsModel called for model ${modelNum}, input length: ${content?.length || 0}`);
-
-    if (!content || content.trim().length === 0) {
-        console.warn('[Worker] Empty content passed to wrapPdbqtAsModel');
-        return `MODEL ${modelNum}\nREMARK VINA RESULT:    ${affinity.toFixed(1)}      0.000      0.000\nREMARK ERROR: No ligand content available\nENDMDL`;
-    }
-
-    // Detect if the content is SDF/MOL format
-    const isSDF = content.includes('$$$$') ||
-        content.includes('M  END') ||
-        content.includes('V2000') ||
-        content.includes('V3000');
-
-    console.log(`[Worker] Format detected: ${isSDF ? 'SDF' : 'PDB/PDBQT'}`);
-
-    // Convert SDF to PDBQT or translate PDBQT coordinates
-    let pdbqtContent: string;
-    if (isSDF) {
-        pdbqtContent = sdfToPdbqt(content, center);
-        console.log(`[Worker] sdfToPdbqt output length: ${pdbqtContent?.length || 0}`);
-    } else {
-        pdbqtContent = translatePdbqt(content, center);
-        console.log(`[Worker] translatePdbqt output length: ${pdbqtContent?.length || 0}`);
-    }
-
-    // Check if conversion produced valid output
-    const hasAtoms = pdbqtContent.includes('ATOM') || pdbqtContent.includes('HETATM');
-    console.log(`[Worker] Has ATOM/HETATM lines: ${hasAtoms}`);
-
-    // If no atoms found after conversion, keep original content for 3Dmol to attempt parsing
-    let finalContent = pdbqtContent;
-    if (!hasAtoms) {
-        console.warn('[Worker] No ATOM lines after conversion, keeping original content');
-        finalContent = content; // Keep original - let viewer try to parse it
-    }
-
-    // Remove only MODEL/ENDMDL markers, keep everything else
-    const cleanedContent = finalContent
-        .split('\n')
-        .filter(line => {
-            const trimmed = line.trim().toUpperCase();
-            return !trimmed.startsWith('MODEL') && !trimmed.startsWith('ENDMDL');
-        })
-        .join('\n');
-
-    console.log(`[Worker] Cleaned content length: ${cleanedContent.length}, preview: ${cleanedContent.substring(0, 100)}`);
-
-    return [
-        `MODEL ${modelNum}`,
-        `REMARK VINA RESULT:    ${affinity.toFixed(1)}      0.000      0.000`,
-        cleanedContent,
-        'ENDMDL'
-    ].join('\n');
-}
-
-function generateLogOutput(poses: DockingPose[]): string {
-    let output = `
-AutoDock Vina v1.2.5 (WebAssembly)
-
-Detected ${navigator.hardwareConcurrency || 4} CPU(s)
-
-mode |   affinity | dist from best mode
-     | (kcal/mol) | rmsd l.b.| rmsd u.b.
------+------------+----------+----------
-`;
-
-    for (const pose of poses) {
-        output += `   ${pose.mode}       ${pose.affinity.toFixed(1)}          ${pose.rmsdLB.toFixed(1)}          ${pose.rmsdUB.toFixed(1)}\n`;
-    }
-
-    output += '\nWriting output...done.\n';
-
-    return output;
-}
-
-function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Handle messages from main thread
 self.onmessage = async (event: MessageEvent<DockingRequest>) => {
     const request = event.data;
+    logVerify('MESSAGE', `Received message type: ${request.type}`);
 
     if (request.type === 'dock') {
         await runDocking(request);

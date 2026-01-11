@@ -1,5 +1,4 @@
 import type { DockingParams, DockingResult } from '../types';
-import { parseVinaOutput } from '../utils/vinaOutputParser';
 
 // Worker message types
 export interface DockingRequest {
@@ -67,11 +66,9 @@ class VinaService {
         await this.initialize();
 
         return new Promise((resolve, reject) => {
-            // Create a new worker for this docking run
-            this.worker = new Worker(
-                new URL('../workers/dockingWorker.ts', import.meta.url),
-                { type: 'module' }
-            );
+            // Create a new CLASSIC worker for this docking run
+            // Must be a classic (non-module) worker to support Aioli's importScripts
+            this.worker = new Worker('/dockingWorker.js');
 
             this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
                 const data = event.data;
@@ -128,59 +125,7 @@ class VinaService {
 // Singleton instance
 export const vinaService = new VinaService();
 
-/**
- * Fallback: Run Vina directly without worker (for simpler testing)
- * This simulates a docking run for development purposes
- */
-export async function simulateDocking(
-    _receptorPdbqt: string,
-    ligandPdbqt: string,
-    params: DockingParams,
-    onProgress?: (message: string, progress: number) => void
-): Promise<DockingResult> {
-    // Simulate initialization
-    onProgress?.('Initializing Vina...', 5);
-    await delay(500);
+// NOTE: simulateDocking() has been REMOVED
+// The docking pipeline now ONLY uses real Vina WASM via the dockingWorker
+// All computation is real - no synthetic/simulated/fake data
 
-    // Simulate file preparation
-    onProgress?.('Preparing receptor...', 15);
-    await delay(300);
-
-    onProgress?.('Preparing ligand...', 25);
-    await delay(300);
-
-    // Simulate docking
-    for (let i = 0; i < 10; i++) {
-        onProgress?.(`Running docking... (step ${i + 1}/10)`, 30 + i * 6);
-        await delay(200);
-    }
-
-    // Simulate output
-    onProgress?.('Writing output...', 95);
-    await delay(200);
-
-    onProgress?.('Docking complete!', 100);
-
-    // Return simulated results
-    const simulatedOutput = `
-Detected CPU cores: ${params.cpus}
-Using exhaustiveness = ${params.exhaustiveness}
-
-mode |   affinity | dist from best mode
-     | (kcal/mol) | rmsd l.b.| rmsd u.b.
------+------------+----------+----------
-   1       -7.5          0.0          0.0
-   2       -7.2          1.2          2.3
-   3       -6.9          2.1          3.5
-   4       -6.7          1.8          2.9
-   5       -6.4          3.2          4.8
-`;
-
-    const simulatedPdbqt = ligandPdbqt; // In real implementation, this would be the docked poses
-
-    return parseVinaOutput(simulatedOutput, simulatedPdbqt);
-}
-
-function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}

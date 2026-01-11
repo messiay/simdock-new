@@ -56,6 +56,7 @@ export interface MoleculeFile {
     name: string;
     content: string;
     format: string;
+    loading?: boolean;
 }
 
 // Application state
@@ -84,7 +85,7 @@ export interface DockingState {
 }
 
 // Tab definitions
-export type TabId = 'prep' | 'input' | 'existing' | 'running' | 'output' | 'projects';
+export type TabId = 'prep' | 'input' | 'existing' | 'running' | 'output' | 'projects' | 'batch';
 
 export interface TabDefinition {
     id: TabId;
