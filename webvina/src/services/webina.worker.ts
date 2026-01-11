@@ -61,9 +61,9 @@ async function initializeVina() {
 
     vinaModule = await moduleFactory({
         noInitialRun: true,
-        // REMOVED PTHREAD_POOL_SIZE restriction to allow default threading behavior in Worker
-        // PTHREAD_POOL_SIZE: 0, 
-        // PTHREAD_POOL_SIZE_STRICT: 0,
+        // FORCE SYNCHRONOUS execution to debug silent crashes
+        PTHREAD_POOL_SIZE: 0,
+        PTHREAD_POOL_SIZE_STRICT: 0,
 
         locateFile: (path: string) => {
             return `${self.location.origin}${WASM_BASE}${path}?t=${cacheBuster}`;
@@ -84,6 +84,17 @@ async function initializeVina() {
         }
     });
 
+    // HEALTH CHECK: Verify Vina is alive
+    try {
+        console.log("[Worker] Running Health Check (vina --help)...");
+        vinaModule.callMain(['--help']);
+        console.log("[Worker] Health Check passed.");
+    } catch (e) {
+        console.error("[Worker] Health Check FAILED:", e);
+        self.postMessage({ type: 'error', payload: "Vina Engine Health Check Failed. WASM corrupted or incompatible?" });
+        return;
+    }
+
     self.postMessage({ type: 'progress', payload: { message: "Engine Initialized", percent: 10 } });
 }
 
@@ -92,12 +103,24 @@ async function runVina(params: RunPayload) {
 
     const { receptor, ligand, args } = params;
 
-    vinaModule.FS.writeFile('/receptor.pdbqt', receptor);
-    vinaModule.FS.writeFile('/ligand.pdbqt', ligand);
+    // Write files
+    try {
+        vinaModule.FS.writeFile('/receptor.pdbqt', receptor);
+        vinaModule.FS.writeFile('/ligand.pdbqt', ligand);
+
+        // DEBUG: Verify files exist
+        const files = vinaModule.FS.readdir('/');
+        console.log("[Worker] Virtual FS Root:", files);
+        const rStats = vinaModule.FS.stat('/receptor.pdbqt');
+        console.log("[Worker] receptor.pdbqt size:", rStats.size);
+    } catch (fsErr) {
+        console.error("[Worker] FS Write Error:", fsErr);
+        self.postMessage({ type: 'error', payload: "Failed to write input files to WASM FS" });
+        return;
+    }
 
     self.postMessage({ type: 'progress', payload: { message: "Starting Job...", percent: 15 } });
 
-    // Ensure all paths are virtual
     const fullArgs = [...args, '--receptor', '/receptor.pdbqt', '--ligand', '/ligand.pdbqt', '--out', '/output.pdbqt'];
 
     console.log(`[Worker] Calling callMain with:`, fullArgs);
@@ -117,7 +140,6 @@ async function runVina(params: RunPayload) {
     } catch (e: any) {
         console.error("[Worker] callMain Logic Error:", e);
 
-        // Fix: Vina might throw an internal ExitStatus which is how it signals completion
         if (e.name === "ExitStatus" || e.message === "ExitStatus" || (typeof e === 'number')) {
             let outputPdbqt = "";
             try {
@@ -127,8 +149,6 @@ async function runVina(params: RunPayload) {
             }
             self.postMessage({ type: 'done', payload: { pdbqt: outputPdbqt } });
         } else {
-            // Explicitly post error instead of crashing worker
-            // Use JSON.stringify just in case e is not an Error object
             const errorMsg = e.message || String(e);
             self.postMessage({ type: 'error', payload: `Internal Vina Error: ${errorMsg}` });
         }
