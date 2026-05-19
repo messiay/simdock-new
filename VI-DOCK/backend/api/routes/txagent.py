@@ -27,6 +27,29 @@ def check_ollama_running(url="http://localhost:11434/api/tags") -> bool:
     except:
         return False
 
+def setup_ollama_aliases():
+    """Create aliases in Ollama for models commonly requested by agent frameworks like TxAgent."""
+    if not check_ollama_running():
+        return
+    try:
+        res = requests.get("http://localhost:11434/api/tags", timeout=2)
+        if res.status_code == 200:
+            models = [m.get("name") for m in res.json().get("models", [])]
+            # Find a local gemma model to copy from
+            gemma_models = [m for m in models if "gemma" in m]
+            base_model = gemma_models[0] if gemma_models else (models[0] if models else None)
+            
+            if base_model:
+                for target_alias in ["gpt-4o", "gpt-3.5-turbo", "gpt-4", "mims-harvard/TxAgent-T1-Llama-3.1-8B"]:
+                    # check if the alias already exists (either exact match or with tag)
+                    if not any(target_alias in m for m in models):
+                        print(f"Creating Ollama alias: {base_model} -> {target_alias}")
+                        import subprocess
+                        subprocess.run(["ollama", "cp", base_model, target_alias], 
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"Warning: Failed to setup Ollama aliases: {e}")
+
 def query_ollama_api(prompt: str, default_model: str = "gemma2:2b") -> str:
     """Helper to query local Ollama server."""
     url = "http://localhost:11434/api/generate"
@@ -151,6 +174,12 @@ def run_therapeutic_query(request: QueryRequest):
             
     else:
         try:
+            # Force TxAgent to use local Ollama (Gemma) if running
+            if check_ollama_running():
+                os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+                os.environ["OPENAI_API_KEY"] = "ollama"
+                setup_ollama_aliases()
+
             # Run using the local TxAgent and ToolUniverse
             agent = tx_agent_class()
             
