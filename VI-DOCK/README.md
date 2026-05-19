@@ -1,8 +1,12 @@
-# VIDocks 🧬
+# VIDocks Pro 🧬
+**High-Performance Cloud-Powered Molecular Docking Platform**
 
-**Browser-Based Molecular Docking Platform**
+🚀 **Live URL:** [https://vidocks.vercel.app](https://vidocks.vercel.app)
 
-VIDocks is a professional molecular docking platform with a beautiful dark/light glassmorphism UI, a powerful 3D molecule viewer, and batch docking capabilities. It features a cloud-ready docking backend utilizing FastAPI, AutoDock Vina, RDKit, and 3Dmol.js.
+![VIDocks Interface](./public/screenshot.png)
+
+VIDocks is a professional molecular docking platform featuring a beautiful glassmorphism UI, real-time 3D visualization, and powerful batch docking capabilities. It streamlines the drug discovery workflow by providing an intuitive interface for AutoDock Vina.
+
 
 ---
 
@@ -16,7 +20,16 @@ VIDocks is a professional molecular docking platform with a beautiful dark/light
 
 ---
 
-## 🚀 How to Run the Entire Project in VS Code
+## 📖 Basic Usage
+
+1.  **Launch**: Open the [Live App](https://vidocks.vercel.app) or run locally.
+2.  **Import Receptor**: Enter a PDB ID (e.g., `1hsg`) or upload your own `.pdb`/`.pdbqt` file.
+3.  **Import Ligand**: Search by PubChem name/CID or upload a `.sdf`/`.mol2`/`.pdbqt` file.
+4.  **Configure**: Adjust the **Grid Box** coordinates to target the active site.
+5.  **Dock**: Click **Run Docking**. The results will be visualized in the 3D viewer, showing the best-fit poses and binding affinities.
+
+---
+
 
 To run the entire platform, you need to start **both** the Backend API and the Frontend Development Server.
 You can do this by using two separate Terminal tabs in VS Code.

@@ -62,6 +62,8 @@ venv/
 SimDock_Projects/
 "VI DOCK_Projects/"
 VI_DOCK_Projects/
+backend/VI DOCK_Projects/
+
 
 # Debug files
 debug_worker*.ts

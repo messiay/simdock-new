@@ -207,5 +207,30 @@ export const apiService = {
         }
 
         return response.json();
+    },
+
+    /**
+     * Query the AI Copilot (Gemma / TxAgent).
+     */
+    async queryCopilot(query: string, targetProtein?: string, ligandSmiles?: string, useRawGemma: boolean = false) {
+        const response = await fetch(`${BASE_URL}/txagent/query`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query,
+                target_protein: targetProtein,
+                ligand_smiles: ligandSmiles,
+                use_raw_gemma: useRawGemma
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'AI Copilot query failed');
+        }
+
+        return response.json();
     }
 };
