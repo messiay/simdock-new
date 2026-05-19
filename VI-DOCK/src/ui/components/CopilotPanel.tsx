@@ -74,6 +74,32 @@ export function CopilotPanel() {
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
+    // Auto-check connection on mount/boot
+    useEffect(() => {
+        const pingConnection = async () => {
+            setConnectionStatus('testing');
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 4500);
+            try {
+                const response = await fetch(`${apiUrl}/`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                if (response.ok) {
+                    setConnectionStatus('online');
+                } else {
+                    setConnectionStatus('offline');
+                    setShowSettings(true);
+                }
+            } catch {
+                clearTimeout(id);
+                setConnectionStatus('offline');
+                setShowSettings(true);
+            }
+        };
+        pingConnection();
+    }, [apiUrl]);
 
     const handleApiUrlChange = (value: string) => {
         setApiUrl(value);
