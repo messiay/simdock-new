@@ -18,9 +18,19 @@ export interface JobStatus {
 
 
 
-const BASE_URL = config.API_BASE_URL.replace(/\/$/, '');
+let BASE_URL = (typeof window !== 'undefined' ? localStorage.getItem('vidocks-api-url') : null) || config.API_BASE_URL;
+BASE_URL = BASE_URL.replace(/\/$/, '');
 
 export const apiService = {
+    setApiBaseUrl(url: string) {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('vidocks-api-url', url);
+        }
+        BASE_URL = url.replace(/\/$/, '');
+    },
+    getApiBaseUrl() {
+        return BASE_URL;
+    },
     async createProject(name: string) {
         const response = await fetch(`${BASE_URL}/projects/`, {
             method: 'POST',

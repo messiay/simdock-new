@@ -12,7 +12,12 @@ import {
     ChevronUp,
     AlertTriangle,
     Loader2,
-    HelpCircle
+    HelpCircle,
+    Activity,
+    Layers,
+    Search,
+    Database,
+    Globe
 } from 'lucide-react';
 import '../styles/CopilotPanel.css';
 
@@ -27,6 +32,10 @@ interface Message {
 
 export function CopilotPanel() {
     const { receptorFile, ligandFile } = useDockingStore();
+    
+    // API URL States
+    const [apiUrl, setApiUrl] = useState(apiService.getApiBaseUrl());
+    const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'online' | 'offline'>('idle');
     
     // UI Settings states
     const [useRawGemma, setUseRawGemma] = useState(false);
@@ -65,6 +74,34 @@ export function CopilotPanel() {
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
+
+    const handleApiUrlChange = (value: string) => {
+        setApiUrl(value);
+        apiService.setApiBaseUrl(value);
+        setConnectionStatus('idle');
+    };
+
+    const checkConnection = async () => {
+        setConnectionStatus('testing');
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 6000);
+        
+        try {
+            const response = await fetch(`${apiUrl}/`, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            if (response.ok) {
+                setConnectionStatus('online');
+            } else {
+                setConnectionStatus('offline');
+            }
+        } catch {
+            clearTimeout(id);
+            setConnectionStatus('offline');
+        }
+    };
 
     const handleSend = async (textToSend: string) => {
         if (!textToSend.trim() || loading) return;
@@ -120,6 +157,37 @@ export function CopilotPanel() {
         setExpandedTraceIndex(expandedTraceIndex === index ? null : index);
     };
 
+    // Helper to extract step categories and icons dynamically
+    const getStepIconAndTitle = (stepText: string) => {
+        const text = stepText.toLowerCase();
+        if (text.includes('pubchem') || text.includes('fetch')) {
+            return {
+                icon: <Database size={12} />,
+                title: 'PubChem Compound Fetch'
+            };
+        } else if (text.includes('pubmed') || text.includes('search') || text.includes('query')) {
+            return {
+                icon: <Search size={12} />,
+                title: 'PubMed Literature Search'
+            };
+        } else if (text.includes('weight') || text.includes('properties') || text.includes('tpsa') || text.includes('calculate')) {
+            return {
+                icon: <Cpu size={12} />,
+                title: 'Chemical Properties Calculation'
+            };
+        } else if (text.includes('docking') || text.includes('vina') || text.includes('smina') || text.includes('autodock')) {
+            return {
+                icon: <Layers size={12} />,
+                title: 'AutoDock Vina Virtual Docking'
+            };
+        } else {
+            return {
+                icon: <Activity size={12} />,
+                title: 'AI Reasoning Step'
+            };
+        }
+    };
+
     const suggestionPrompts = [
         "What are the major side effects associated with inhibiting this target?",
         "Are there any drug-drug interactions with approved ligands for this target?",
@@ -166,28 +234,58 @@ export function CopilotPanel() {
                 </div>
 
                 {showSettings && (
-                    <div className="inputs-grid">
-                        <div className="context-input-group">
-                            <label><Dna size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Target Protein</label>
-                            <input
-                                type="text"
-                                className="context-field"
-                                placeholder="Auto-fills from receptor (e.g. DRD2)"
-                                value={targetProtein}
-                                onChange={(e) => setTargetProtein(e.target.value)}
-                            />
+                    <>
+                        <div className="inputs-grid">
+                            <div className="context-input-group">
+                                <label><Dna size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Target Protein</label>
+                                <input
+                                    type="text"
+                                    className="context-field"
+                                    placeholder="Auto-fills from receptor (e.g. DRD2)"
+                                    value={targetProtein}
+                                    onChange={(e) => setTargetProtein(e.target.value)}
+                                />
+                            </div>
+                            <div className="context-input-group">
+                                <label><Pill size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Ligand context</label>
+                                <input
+                                    type="text"
+                                    className="context-field"
+                                    placeholder="Auto-fills from ligand (SMILES/Name)"
+                                    value={ligandSmiles}
+                                    onChange={(e) => setLigandSmiles(e.target.value)}
+                                />
+                            </div>
                         </div>
-                        <div className="context-input-group">
-                            <label><Pill size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Ligand context</label>
-                            <input
-                                type="text"
-                                className="context-field"
-                                placeholder="Auto-fills from ligand (SMILES/Name)"
-                                value={ligandSmiles}
-                                onChange={(e) => setLigandSmiles(e.target.value)}
-                            />
+                        
+                        <div className="api-url-row">
+                            <label><Globe size={11} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Staging API Base URL (Colab / Local)</label>
+                            <div className="api-url-input-wrapper">
+                                <input
+                                    type="text"
+                                    className="context-field api-url-field"
+                                    placeholder="e.g. http://localhost:8123"
+                                    value={apiUrl}
+                                    onChange={(e) => handleApiUrlChange(e.target.value)}
+                                />
+                                <button
+                                    className={`test-conn-btn ${connectionStatus}`}
+                                    onClick={checkConnection}
+                                    disabled={connectionStatus === 'testing'}
+                                >
+                                    {connectionStatus === 'testing' ? (
+                                        <Loader2 size={12} className="spin-icon" />
+                                    ) : connectionStatus === 'online' ? (
+                                        'Online'
+                                    ) : connectionStatus === 'offline' ? (
+                                        'Offline'
+                                    ) : (
+                                        'Test'
+                                    )}
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
 
@@ -208,26 +306,34 @@ export function CopilotPanel() {
                             })}
                         </div>
 
-                        {/* Reasoning steps trace drawer (if TxAgent was used and steps are present) */}
+                        {/* Interactive Reasoning steps trace timeline (if TxAgent was used and steps are present) */}
                         {msg.trace && msg.trace.length > 0 && (
-                            <div className="reasoning-trace-container">
-                                <div className="trace-header" onClick={() => toggleTrace(index)}>
-                                    <span>Reasoning Steps & Evidence Log</span>
+                            <div className="execution-timeline">
+                                <div className="timeline-trigger" onClick={() => toggleTrace(index)}>
+                                    <span>Visual Execution Feed ({msg.trace.length} Steps)</span>
                                     {expandedTraceIndex === index ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                 </div>
                                 
                                 {expandedTraceIndex === index && (
-                                    <div className="trace-body">
-                                        {msg.trace.map((step, sIdx) => (
-                                            <div key={sIdx} className="trace-step">
-                                                <span className="trace-step-num">[{sIdx + 1}]</span>
-                                                <span>{step}</span>
-                                            </div>
-                                        ))}
+                                    <div className="timeline-flow">
+                                        {msg.trace.map((step, sIdx) => {
+                                            const stepInfo = getStepIconAndTitle(step);
+                                            return (
+                                                <div key={sIdx} className="timeline-node completed">
+                                                    <div className="node-icon">
+                                                        {stepInfo.icon}
+                                                    </div>
+                                                    <div className="node-content">
+                                                        <span className="node-title">{stepInfo.title}</span>
+                                                        <span className="node-desc">{step}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                         {msg.tools && msg.tools.length > 0 && (
-                                            <div className="tools-used-list">
+                                            <div className="tools-list-horizontal">
                                                 {msg.tools.map((tool, tIdx) => (
-                                                    <span key={tIdx} className="tool-tag">
+                                                    <span key={tIdx} className="tool-tag-premium">
                                                         <HelpCircle size={10} /> {tool}
                                                     </span>
                                                 ))}
@@ -251,6 +357,21 @@ export function CopilotPanel() {
                                 <span className="dot"></span>
                                 <span className="dot"></span>
                                 <span className="dot"></span>
+                            </div>
+                        </div>
+                        
+                        {/* Dynamic timeline during loading */}
+                        <div className="execution-timeline">
+                            <div className="timeline-flow" style={{ margin: '10px 0 0 8px', borderLeft: '1px dashed rgba(255,255,255,0.15)' }}>
+                                <div className="timeline-node running">
+                                    <div className="node-icon">
+                                        <Activity size={12} className="spin-icon" />
+                                    </div>
+                                    <div className="node-content">
+                                        <span className="node-title">Analyzing Query</span>
+                                        <span className="node-desc">Planning pharmacological reasoning steps...</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
