@@ -425,31 +425,52 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 raise RuntimeError(f"LightDock simulation failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
 
             # --- Step 3: Rank poses ---
-            rank_cmd = [ld_rank, str(num_swarms), str(sim_steps)]
+            # Try binary first, fall back to python -m lightdock.bin.lgd_rank
+            if ld_rank:
+                rank_cmd = [ld_rank, str(num_swarms), str(sim_steps)]
+            else:
+                rank_cmd = ["python", "-m", "lightdock.bin.lgd_rank", str(num_swarms), str(sim_steps)]
             print(f"DEBUG: Rank cmd: {' '.join(rank_cmd)}")
-            subprocess.run(rank_cmd, capture_output=True, text=True, cwd=str(ld_work_dir))
+            rank_res = subprocess.run(rank_cmd, capture_output=True, text=True, cwd=str(ld_work_dir))
+            print(f"DEBUG: Rank stdout: {rank_res.stdout[:300]}")
+            print(f"DEBUG: Rank stderr: {rank_res.stderr[:300]}")
+
+            # --- Debug: list files in work dir ---
+            all_files = list(ld_work_dir.rglob("*"))
+            print(f"DEBUG: Files in work dir: {[str(f.relative_to(ld_work_dir)) for f in all_files[:30]]}")
 
             # --- Step 4: Parse top score ---
-            ranking_file = ld_work_dir / "rank_by_scoring.list"
+            # LightDock can output rank_by_scoring.list or similar
+            possible_rank_files = [
+                ld_work_dir / "rank_by_scoring.list",
+                ld_work_dir / "lightdock_rank.list",
+                ld_work_dir / "rank.list",
+            ]
+            ranking_file = next((f for f in possible_rank_files if f.exists()), None)
+
             top_score = None
             top_poses = []
-            if ranking_file.exists():
+            if ranking_file:
+                print(f"DEBUG: Parsing ranking file: {ranking_file}")
                 with open(ranking_file) as rf:
                     for line in rf:
                         line = line.strip()
                         if not line or line.startswith("#"):
                             continue
                         parts = line.split()
+                        # LightDock rank format: swarm_id step score ...
                         if len(parts) >= 3:
                             try:
                                 score_val = float(parts[2])
                                 top_poses.append({
-                                    "swarm": parts[0], "step": parts[1], "score": score_val
+                                    "swarm": parts[0], "step": parts[1], "score": round(score_val, 4)
                                 })
-                                if top_score is None or score_val < top_score:
+                                if top_score is None or score_val > top_score:  # LightDock scores: higher = better
                                     top_score = score_val
                             except ValueError:
                                 pass
+            else:
+                print("WARNING: No ranking file found after lgd_rank run")
 
             # --- Step 5: Generate best complex PDB ---
             if ld_gen:
