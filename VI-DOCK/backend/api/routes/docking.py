@@ -413,7 +413,12 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 raise RuntimeError(f"LightDock setup failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
 
             # --- Step 2: Simulation ---
-            run_cmd = [ld_run, str(num_swarms), str(sim_steps)]
+            # lightdock3 <setup_file> <steps> [-c cores]
+            setup_json = ld_work_dir / "lightdock3_setup.json"
+            if not setup_json.exists():
+                # Some versions name it setup.json
+                setup_json = ld_work_dir / "setup.json"
+            run_cmd = [ld_run, str(setup_json), str(sim_steps), "-c", "2"]
             print(f"DEBUG: Run cmd: {' '.join(run_cmd)}")
             res = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(ld_work_dir), timeout=900)
             if res.returncode != 0:
