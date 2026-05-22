@@ -425,11 +425,11 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 raise RuntimeError(f"LightDock setup JSON not found! Files in dir: {all_files}\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
 
             # LightDock typically expects the relative filename when run from the cwd
-            run_cmd = [ld_run, setup_json.name, str(sim_steps), "-c", "2"]
+            run_cmd = [ld_run, setup_json.name, str(sim_steps)]
             print(f"DEBUG: Run cmd: {' '.join(run_cmd)}")
-            res = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(ld_work_dir), timeout=900)
-            if res.returncode != 0:
-                raise RuntimeError(f"LightDock simulation failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
+            sim_res = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(ld_work_dir), timeout=900)
+            if sim_res.returncode != 0:
+                raise RuntimeError(f"LightDock simulation failed:\nSTDOUT: {sim_res.stdout}\nSTDERR: {sim_res.stderr}")
 
             # --- Step 3: Rank poses ---
             # Try binary first, fall back to python -m lightdock.bin.lgd_rank
@@ -506,9 +506,11 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 "num_swarms": num_swarms,
                 "sim_steps": sim_steps,
                 "debug_info": {
+                    "sim_stdout": sim_res.stdout[:1000] if 'sim_res' in locals() else None,
+                    "sim_stderr": sim_res.stderr[:1000] if 'sim_res' in locals() else None,
                     "rank_cmd": rank_cmd,
-                    "rank_stdout": rank_res.stdout,
-                    "rank_stderr": rank_res.stderr,
+                    "rank_stdout": rank_res.stdout[:1000],
+                    "rank_stderr": rank_res.stderr[:1000],
                     "files_in_dir": [str(f.relative_to(ld_work_dir)) for f in all_files]
                 }
             }
