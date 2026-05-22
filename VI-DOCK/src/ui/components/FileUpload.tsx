@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useDockingStore } from '../../store/dockingStore';
 import type { MoleculeFile } from '../../types';
-import { UploadCloud, FileText, X } from 'lucide-react';
+import { UploadCloud, FileText, X, Download, Loader2 } from 'lucide-react';
 import { sdfToPdbqt, isSdfFormat } from '../../utils/sdfConverter';
+import { apiService } from '../../services/apiService';
 import '../styles/FileUpload.css';
 
 interface FileUploadProps {
@@ -12,6 +13,8 @@ interface FileUploadProps {
     file: MoleculeFile | null;
     onFileChange: (file: MoleculeFile | null) => void;
     optional?: boolean;
+    allowPdbFetch?: boolean;
+    allowPubChemFetch?: boolean;
 }
 
 export function FileUpload({
@@ -21,7 +24,45 @@ export function FileUpload({
     file,
     onFileChange,
     optional = false,
+    allowPdbFetch = false,
+    allowPubChemFetch = false,
 }: FileUploadProps) {
+    const [fetchInput, setFetchInput] = useState('');
+    const [isFetching, setIsFetching] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    const handleFetch = async (e: React.MouseEvent | React.KeyboardEvent) => {
+        if ('key' in e && e.key !== 'Enter') return;
+        if (!fetchInput.trim()) return;
+
+        setIsFetching(true);
+        setFetchError(null);
+
+        try {
+            if (allowPdbFetch && (!allowPubChemFetch || fetchInput.length === 4)) {
+                // Fetch PDB
+                const result = await apiService.fetchPdb(fetchInput.trim());
+                onFileChange({
+                    name: `${result.title || fetchInput.toUpperCase()}.pdb`,
+                    content: result.pdb_content,
+                    format: 'pdb',
+                });
+            } else if (allowPubChemFetch) {
+                // Fetch PubChem
+                const result = await apiService.fetchPubChem(fetchInput.trim());
+                onFileChange({
+                    name: `${result.name || fetchInput}.pdbqt`,
+                    content: result.pdbqt_content || result.sdf_content,
+                    format: result.pdbqt_content ? 'pdbqt' : 'sdf',
+                });
+            }
+        } catch (err: any) {
+            setFetchError(err.message || 'Fetch failed');
+        } finally {
+            setIsFetching(false);
+        }
+    };
+
     const handleDrop = useCallback(
         (e: React.DragEvent<HTMLDivElement>) => {
             e.preventDefault();
@@ -99,6 +140,25 @@ export function FileUpload({
                         <p className="dropzone-formats">
                             {description}
                         </p>
+
+                        {(allowPdbFetch || allowPubChemFetch) && (
+                            <div className="inline-fetch" onClick={(e) => e.stopPropagation()}>
+                                <div className="fetch-input-wrapper">
+                                    <input 
+                                        type="text" 
+                                        placeholder={allowPdbFetch && allowPubChemFetch ? "PDB ID or PubChem CID" : allowPdbFetch ? "Enter PDB ID (e.g., 1A7H)" : "Enter PubChem CID"}
+                                        value={fetchInput}
+                                        onChange={(e) => setFetchInput(e.target.value)}
+                                        onKeyDown={handleFetch}
+                                    />
+                                    <button onClick={handleFetch} disabled={isFetching || !fetchInput.trim()}>
+                                        {isFetching ? <Loader2 size={14} className="spin-icon"/> : <Download size={14}/>}
+                                        {isFetching ? ' Fetching' : ' Fetch'}
+                                    </button>
+                                </div>
+                                {fetchError && <div className="fetch-error">{fetchError}</div>}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -141,6 +201,7 @@ export function ReceptorUpload() {
             acceptedFormats={['pdbqt', 'pdb', 'ent', 'xyz', 'pqr', 'mcif', 'mmcif']}
             file={receptorFile}
             onFileChange={setReceptorFile}
+            allowPdbFetch={true}
         />
     );
 }
@@ -195,6 +256,8 @@ export function LigandUpload() {
             acceptedFormats={dockingMode === 'ppd' ? ['pdb', 'pdbqt'] : ['pdbqt', 'mol', 'mol2', 'sdf', 'sd', 'pdb', 'smi', 'smiles', 'xyz', 'can', 'mdl']}
             file={ligandFile}
             onFileChange={handleLigandChange}
+            allowPdbFetch={dockingMode === 'ppd'}
+            allowPubChemFetch={dockingMode === 'vina'}
         />
     );
 }

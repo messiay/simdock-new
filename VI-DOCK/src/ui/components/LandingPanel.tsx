@@ -24,7 +24,7 @@ export function LandingPanel() {
                     {/* Protein-Ligand Docking Card */}
                     <div className="mode-card single" onClick={() => {
                         setDockingMode('vina');
-                        setActiveTab('prep');
+                        setActiveTab('input');
                     }}>
                         <div className="card-bg"></div>
                         <div className="card-icon">
@@ -42,7 +42,7 @@ export function LandingPanel() {
                     {/* Protein-Protein Docking Card */}
                     <div className="mode-card batch" onClick={() => {
                         setDockingMode('ppd');
-                        setActiveTab('prep');
+                        setActiveTab('input');
                     }}>
                         <div className="card-bg"></div>
                         <div className="card-icon">

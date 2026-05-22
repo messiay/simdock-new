@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useDockingStore } from './store/dockingStore';
 import { Sidebar } from './ui/components/Sidebar';
-import { PrepPanel } from './ui/components/PrepPanel';
 import { InputPanel } from './ui/components/InputPanel';
 import { RunningPanel } from './ui/components/RunningPanel';
 import { OutputPanel } from './ui/components/OutputPanel';
@@ -32,12 +31,6 @@ function App() {
 
   const renderActivePanel = () => {
     switch (activeTab) {
-      case 'prep':
-        return (
-          <DraggablePanel title="Molecule Import" width="500px" initialX={60} initialY={80}>
-            <PrepPanel />
-          </DraggablePanel>
-        );
       case 'input':
         return (
           <DraggablePanel title="Input Parameters" width="450px" initialX={60} initialY={80}>
