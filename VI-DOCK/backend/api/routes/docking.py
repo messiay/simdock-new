@@ -491,12 +491,11 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                         if not line or line.startswith("#"):
                             continue
                         parts = line.split()
-                        # LightDock rank format: swarm_id step score ...
-                        if len(parts) >= 3:
+                        if len(parts) > 10 and parts[0].isdigit():
                             try:
-                                score_val = float(parts[2])
+                                score_val = float(parts[-1])
                                 top_poses.append({
-                                    "swarm": parts[0], "step": parts[1], "score": round(score_val, 4)
+                                    "swarm": parts[0], "pose": parts[1], "score": round(score_val, 4)
                                 })
                                 if top_score is None or score_val > top_score:  # LightDock scores: higher = better
                                     top_score = score_val
