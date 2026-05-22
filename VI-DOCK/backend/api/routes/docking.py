@@ -505,6 +505,11 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
             else:
                 print("WARNING: No ranking file found after lgd_rank run")
 
+            rank_content = ""
+            if ranking_file:
+                with open(ranking_file) as rf:
+                    rank_content = "".join(rf.readlines()[:15])
+
             # --- Step 5: Generate best complex PDB ---
             if ld_gen:
                 subprocess.run(
@@ -519,9 +524,8 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 # Merge as fallback if generation fails
                 with open(receptor_path) as r, open(ligand_path) as l, open(final_output, "w") as o:
                     o.write(r.read())
-                    o.write("\nTER\n")
+                    o.write("\n")
                     o.write(l.read())
-                    o.write("\nEND\n")
 
             result = {
                 "success": True,
@@ -532,6 +536,7 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 "num_swarms": num_swarms,
                 "sim_steps": sim_steps,
                 "debug_info": {
+                    "rank_content": rank_content,
                     "sim_stdout": sim_res.stdout[:1000] if 'sim_res' in locals() else None,
                     "sim_stderr": sim_res.stderr[:1000] if 'sim_res' in locals() else None,
                     "rank_cmd": rank_cmd,
