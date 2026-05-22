@@ -510,16 +510,49 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                     rank_content = "".join(rf.readlines()[:15])
 
             # --- Step 5: Generate best complex PDB ---
-            if ld_gen:
-                subprocess.run(
-                    [ld_gen, "1"],
-                    capture_output=True, text=True, cwd=str(ld_work_dir)
-                )
+            generated_success = False
+            if ld_gen and top_poses:
+                top_swarm = top_poses[0]["swarm"]
+                top_pose_id = top_poses[0]["pose"]
+                swarm_dir = ld_work_dir / f"swarm_{top_swarm}"
+                
+                if swarm_dir.exists():
+                    print(f"DEBUG: Generating PDB for swarm {top_swarm}, pose {top_pose_id}")
+                    # lgd_generate_conformations.py needs to be run INSIDE the swarm directory
+                    # Usage: lgd_generate_conformations.py ../receptor.pdb ../ligand.pdb ../lightdock.info <steps>
+                    gen_cmd = [
+                        ld_gen,
+                        str(local_receptor.name),
+                        str(local_ligand.name),
+                        "lightdock.info",
+                        str(sim_steps)
+                    ]
+                    # We pass relative paths to the parent dir files
+                    gen_cmd_relative = [
+                        ld_gen,
+                        f"../{local_receptor.name}",
+                        f"../{local_ligand.name}",
+                        "../lightdock.info",
+                        str(sim_steps)
+                    ]
+                    
+                    gen_res = subprocess.run(
+                        gen_cmd_relative,
+                        capture_output=True, text=True, cwd=str(swarm_dir)
+                    )
+                    
+                    # The pose should be generated as lightdock_{top_pose_id}.pdb
+                    generated_pdb = swarm_dir / f"lightdock_{top_pose_id}.pdb"
+                    if generated_pdb.exists():
+                        shutil_mod.copy(str(generated_pdb), final_output)
+                        generated_success = True
+                    else:
+                        print(f"WARNING: Generated PDB not found at {generated_pdb}")
+                        print(f"GEN STDOUT: {gen_res.stdout}")
+                        print(f"GEN STDERR: {gen_res.stderr}")
 
-            generated = list(ld_work_dir.glob("lightdock_*.pdb"))
-            if generated:
-                shutil_mod.copy(str(generated[0]), final_output)
-            else:
+            if not generated_success:
+                print("WARNING: Falling back to merging original PDBs due to generation failure.")
                 # Merge as fallback if generation fails
                 with open(receptor_path) as r, open(ligand_path) as l, open(final_output, "w") as o:
                     o.write(r.read())
