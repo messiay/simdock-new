@@ -393,6 +393,23 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
         if ld_setup and ld_run and ld_rank:
             print("INFO: LightDock found. Running real protein-protein docking...")
 
+            # --- DYNAMIC PATCH FOR PYTHON 3.12 COMPATIBILITY ---
+            # LightDock uses .readfp() which was removed in Python 3.12.
+            # We patch it dynamically to .read_file() before running.
+            import sys
+            for path in sys.path:
+                param_py = Path(path) / "lightdock" / "gso" / "parameters.py"
+                if param_py.exists():
+                    try:
+                        content = param_py.read_text()
+                        if "readfp(" in content:
+                            param_py.write_text(content.replace("readfp(", "read_file("))
+                            print(f"DEBUG: Patched {param_py} for Python 3.12 compatibility.")
+                    except Exception as patch_err:
+                        print(f"WARNING: Could not patch lightdock: {patch_err}")
+                    break
+            # --------------------------------------------------
+
             # LightDock needs its own working directory
             ld_work_dir = results_dir / f"lightdock_{job_id}"
             ld_work_dir.mkdir(exist_ok=True)
