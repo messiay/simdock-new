@@ -422,9 +422,10 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
             shutil_mod.copy(ligand_path, local_ligand)
 
             # --- Step 1: Setup (generates ANM modes & swarm positions) ---
-            num_swarms    = 25
-            num_glowworms = 200
-            sim_steps     = 100
+            # Reduced parameters for quick testing to avoid the 15-minute timeout on 1 CPU!
+            num_swarms    = 10
+            num_glowworms = 100
+            sim_steps     = 10
             setup_cmd = [
                 ld_setup, str(local_receptor), str(local_ligand),
                 "-s", str(num_swarms),
