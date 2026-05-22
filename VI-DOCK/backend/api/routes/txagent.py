@@ -133,99 +133,99 @@ def run_therapeutic_query(job_id: str, request: QueryRequest):
     try:
         hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_KEY")
     
-    # 1. Check if we should use direct Gemma API fallback
-    use_fallback = request.use_raw_gemma
-    tx_agent_class = None
-    
-    if not use_fallback:
-        try:
-            from txagent import TxAgent
-            tx_agent_class = TxAgent
-        except ImportError:
-            use_fallback = True
+        # 1. Check if we should use direct Gemma API fallback
+        use_fallback = request.use_raw_gemma
+        tx_agent_class = None
 
-    # 2. Build prompt context
-    context = []
-    if request.target_protein:
-        context.append(f"- Target Protein/Receptor: {request.target_protein}")
-    if request.ligand_smiles:
-        context.append(f"- Ligand SMILES/Structure: {request.ligand_smiles}")
-    
-    context_str = "\n".join(context)
-    
-    # 3. Execution Path
-    if use_fallback:
-        prompt = request.query
-        if context_str:
-            prompt = f"Context:\n{context_str}\n\nQuestion: {prompt}\n\nProvide a detailed therapeutic analysis and list potential drug interactions or contraindications."
-        
-        # Path A: Try Local Ollama if active
-        if check_ollama_running():
+        if not use_fallback:
             try:
-                answer = query_ollama_api(prompt)
+                from txagent import TxAgent
+                tx_agent_class = TxAgent
+            except ImportError:
+                use_fallback = True
+
+        # 2. Build prompt context
+        context = []
+        if request.target_protein:
+            context.append(f"- Target Protein/Receptor: {request.target_protein}")
+        if request.ligand_smiles:
+            context.append(f"- Ligand SMILES/Structure: {request.ligand_smiles}")
+
+        context_str = "\n".join(context)
+
+        # 3. Execution Path
+        if use_fallback:
+            prompt = request.query
+            if context_str:
+                prompt = f"Context:\n{context_str}\n\nQuestion: {prompt}\n\nProvide a detailed therapeutic analysis and list potential drug interactions or contraindications."
+
+            # Path A: Try Local Ollama if active
+            if check_ollama_running():
+                try:
+                    answer = query_ollama_api(prompt)
+                    txagent_jobs[job_id]["status"] = "completed"
+                    txagent_jobs[job_id]["result"] = {
+                        "recommendation": answer,
+                        "reasoning_steps": ["Direct query to local Ollama server."],
+                        "tools_used": [],
+                        "mode": "Ollama (Local Gemma)"
+                    }
+                    return
+                except Exception as e:
+                    traceback.print_exc()
+                    if not hf_token:
+                        raise HTTPException(status_code=500, detail=f"Local Ollama failed: {str(e)}")
+
+            # Path B: Hugging Face Serverless fallback
+            if not hf_token:
+                txagent_jobs[job_id]["status"] = "failed"
+                txagent_jobs[job_id]["error"] = "Neither TxAgent is installed, local Ollama is running, nor HF_TOKEN is configured."
+                return
+
+            try:
+                answer = query_gemma_api(prompt, hf_token)
                 txagent_jobs[job_id]["status"] = "completed"
                 txagent_jobs[job_id]["result"] = {
                     "recommendation": answer,
-                    "reasoning_steps": ["Direct query to local Ollama server."],
+                    "reasoning_steps": ["Direct query to Hugging Face Inference API."],
                     "tools_used": [],
-                    "mode": "Ollama (Local Gemma)"
+                    "mode": "Gemma API Direct"
                 }
                 return
             except Exception as e:
                 traceback.print_exc()
-                if not hf_token:
-                    raise HTTPException(status_code=500, detail=f"Local Ollama failed: {str(e)}")
-        
-        # Path B: Hugging Face Serverless fallback
-        if not hf_token:
-            txagent_jobs[job_id]["status"] = "failed"
-            txagent_jobs[job_id]["error"] = "Neither TxAgent is installed, local Ollama is running, nor HF_TOKEN is configured."
-            return
-        
-        try:
-            answer = query_gemma_api(prompt, hf_token)
-            txagent_jobs[job_id]["status"] = "completed"
-            txagent_jobs[job_id]["result"] = {
-                "recommendation": answer,
-                "reasoning_steps": ["Direct query to Hugging Face Inference API."],
-                "tools_used": [],
-                "mode": "Gemma API Direct"
-            }
-            return
-        except Exception as e:
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Gemma API failed: {str(e)}")
-            
-    else:
-        try:
-            # Force TxAgent to use local Ollama (Gemma) if running
-            if check_ollama_running():
-                os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
-                os.environ["OPENAI_API_KEY"] = "ollama"
-                setup_ollama_aliases()
+                raise HTTPException(status_code=500, detail=f"Gemma API failed: {str(e)}")
 
-            # Run using the local TxAgent and ToolUniverse
-            agent = tx_agent_class()
-            
-            full_query = request.query
-            if context_str:
-                full_query = f"{context_str}\n\nQuery: {full_query}"
-                
-            result = agent.run(query=full_query)
-            
-            txagent_jobs[job_id]["status"] = "completed"
-            txagent_jobs[job_id]["result"] = {
-                "recommendation": result.get("answer", "No answer returned by TxAgent."),
-                "reasoning_steps": result.get("reasoning_trace", ["Agent reasoning completed."]),
-                "tools_used": result.get("executed_tools", []),
-                "mode": "TxAgent + ToolUniverse"
-            }
-            return
-        except Exception as e:
-            traceback.print_exc()
-            txagent_jobs[job_id]["status"] = "failed"
-            txagent_jobs[job_id]["error"] = f"TxAgent failed: {str(e)}"
-            
+        else:
+            try:
+                # Force TxAgent to use local Ollama (Gemma) if running
+                if check_ollama_running():
+                    os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+                    os.environ["OPENAI_API_KEY"] = "ollama"
+                    setup_ollama_aliases()
+
+                # Run using the local TxAgent and ToolUniverse
+                agent = tx_agent_class()
+
+                full_query = request.query
+                if context_str:
+                    full_query = f"{context_str}\n\nQuery: {full_query}"
+
+                result = agent.run(query=full_query)
+
+                txagent_jobs[job_id]["status"] = "completed"
+                txagent_jobs[job_id]["result"] = {
+                    "recommendation": result.get("answer", "No answer returned by TxAgent."),
+                    "reasoning_steps": result.get("reasoning_trace", ["Agent reasoning completed."]),
+                    "tools_used": result.get("executed_tools", []),
+                    "mode": "TxAgent + ToolUniverse"
+                }
+                return
+            except Exception as e:
+                traceback.print_exc()
+                txagent_jobs[job_id]["status"] = "failed"
+                txagent_jobs[job_id]["error"] = f"TxAgent failed: {str(e)}"
+
     except Exception as outer_e:
         traceback.print_exc()
         txagent_jobs[job_id]["status"] = "failed"
