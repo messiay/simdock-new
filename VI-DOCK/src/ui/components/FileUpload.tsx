@@ -132,11 +132,11 @@ function readFile(
 
 // Preset file upload components
 export function ReceptorUpload() {
-    const { receptorFile, setReceptorFile } = useDockingStore();
+    const { receptorFile, setReceptorFile, dockingMode } = useDockingStore();
 
     return (
         <FileUpload
-            label="Receptor File"
+            label={dockingMode === 'ppd' ? "Protein 1" : "Receptor File"}
             description="PDBQT (best), PDB, ENT, XYZ, PQR, MMCIF"
             acceptedFormats={['pdbqt', 'pdb', 'ent', 'xyz', 'pqr', 'mcif', 'mmcif']}
             file={receptorFile}
@@ -145,8 +145,8 @@ export function ReceptorUpload() {
     );
 }
 
-export function LigandUpload({ mode = 'vina' }: { mode?: 'vina' | 'ppd' }) {
-    const { ligandFile, setLigandFile } = useDockingStore();
+export function LigandUpload() {
+    const { ligandFile, setLigandFile, dockingMode, setDockingMode } = useDockingStore();
 
     // Wrapper that converts SDF to PDBQT on upload
     const handleLigandChange = useCallback((file: MoleculeFile | null) => {
@@ -155,8 +155,18 @@ export function LigandUpload({ mode = 'vina' }: { mode?: 'vina' | 'ppd' }) {
             return;
         }
 
+        // Auto-switch mode based on format!
+        if (file.format === 'pdb' || file.format === 'ent' || file.format === 'cif') {
+            console.info('[LigandUpload] Auto-switching to PPD mode based on file format.');
+            setDockingMode('ppd');
+            setLigandFile(file);
+            return;
+        }
+
         // Check if file is SDF format and convert immediately
-        if (mode === 'vina' && (file.format === 'sdf' || file.format === 'mol' || file.format === 'sd' || isSdfFormat(file.content))) {
+        if (file.format === 'sdf' || file.format === 'mol' || file.format === 'sd' || isSdfFormat(file.content)) {
+            console.info('[LigandUpload] Auto-switching to Vina mode based on file format.');
+            setDockingMode('vina');
             console.info('[LigandUpload] Converting SDF to PDBQT on upload...');
             const pdbqtContent = sdfToPdbqt(file.content);
 
@@ -176,13 +186,13 @@ export function LigandUpload({ mode = 'vina' }: { mode?: 'vina' | 'ppd' }) {
         } else {
             setLigandFile(file);
         }
-    }, [mode, setLigandFile]);
+    }, [setLigandFile, setDockingMode]);
 
     return (
         <FileUpload
-            label={mode === 'ppd' ? "Protein B (Receptor 2)" : "Ligand File"}
-            description={mode === 'ppd' ? "PDB, PDBQT" : "PDBQT (best), MOL, MOL2, SDF, PDB, SMI, XYZ"}
-            acceptedFormats={mode === 'ppd' ? ['pdb', 'pdbqt'] : ['pdbqt', 'mol', 'mol2', 'sdf', 'sd', 'pdb', 'smi', 'smiles', 'xyz', 'can', 'mdl']}
+            label={dockingMode === 'ppd' ? "Protein 2" : "Ligand File"}
+            description={dockingMode === 'ppd' ? "PDB, PDBQT" : "PDBQT (best), MOL, MOL2, SDF, PDB, SMI, XYZ"}
+            acceptedFormats={dockingMode === 'ppd' ? ['pdb', 'pdbqt'] : ['pdbqt', 'mol', 'mol2', 'sdf', 'sd', 'pdb', 'smi', 'smiles', 'xyz', 'can', 'mdl']}
             file={ligandFile}
             onFileChange={handleLigandChange}
         />

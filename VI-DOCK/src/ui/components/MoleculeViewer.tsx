@@ -176,23 +176,6 @@ export function MoleculeViewer() {
                                 }, { model: receptorModel });
                             } catch (e) { console.warn("Surface failed", e); }
                         }
-                        
-                        // Add floating Nametag for Receptor if not showing a docked result
-                        if (!hasResult) {
-                            const atoms = receptorModel.selectedAtoms();
-                            if (atoms.length > 0) {
-                                // Find an atom to attach the label to (using the first atom for simplicity)
-                                viewer.addLabel("Receptor", { 
-                                    position: atoms[0], 
-                                    backgroundColor: 0x0ea5e9, // Cyan
-                                    fontColor: 'white', 
-                                    backgroundOpacity: 0.9,
-                                    fontSize: 16,
-                                    inFront: true,
-                                    showBackground: true
-                                });
-                            }
-                        }
                     }
                 }
 
@@ -221,22 +204,6 @@ export function MoleculeViewer() {
                         stick: { colorscheme: 'ligandCarbon', radius: 0.15 },
                         sphere: { colorscheme: 'ligandCarbon', scale: 0.25 }
                     });
-                    
-                    // Add floating Nametag for Ligand/Partner if not showing a docked result
-                    if (!hasResult) {
-                        const atoms = lModel.selectedAtoms();
-                        if (atoms.length > 0) {
-                            viewer.addLabel(params.engine === 'ppd' ? "Partner" : "Ligand", { 
-                                position: atoms[0], 
-                                backgroundColor: 0xec4899, // Pink
-                                fontColor: 'white', 
-                                backgroundOpacity: 0.9,
-                                fontSize: 16,
-                                inFront: true,
-                                showBackground: true
-                            });
-                        }
-                    }
                     
                     // Zoom to ligand if it's a result pose (might have moved significantly)
                     if (hasResult) {

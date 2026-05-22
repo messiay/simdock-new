@@ -22,11 +22,12 @@ export function InputPanel() {
         addConsoleOutput,
         clearConsoleOutput,
         setResult,
-        setActiveTab
+        setActiveTab,
+        dockingMode,
+        setDockingMode
     } = useDockingStore();
 
     const [autoRemoveNonProtein, setAutoRemoveNonProtein] = useState(true);
-    const [dockingMode, setDockingMode] = useState<'vina' | 'ppd'>('vina');
     const [error, setError] = useState<string | null>(null);
 
     const canRun = receptorFile && ligandFile;
@@ -196,7 +197,7 @@ export function InputPanel() {
                     </div>
 
                     <div className="file-column">
-                        <LigandUpload mode={dockingMode} />
+                        <LigandUpload />
                         <CorrectPoseUpload />
 
                         {ligandFile && dockingMode === 'vina' && (

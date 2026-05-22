@@ -30,6 +30,8 @@ interface DockingStore extends DockingState {
     // Engine Selection
     dockingEngine: DockingEngine;
     setDockingEngine: (engine: DockingEngine) => void;
+    dockingMode: 'vina' | 'ppd';
+    setDockingMode: (mode: 'vina' | 'ppd') => void;
 
     // View State
     viewMode: 'cartoon' | 'sticks' | 'surface';
@@ -88,6 +90,8 @@ export const useDockingStore = create<DockingStore>()(
 
             activeTab: 'landing',
 
+            dockingMode: 'vina', // default UI mode
+
             // Visual Settings Defaults
             showBox: true,
             showGrid: true,
@@ -98,6 +102,7 @@ export const useDockingStore = create<DockingStore>()(
             setLigandFile: (file) => set({ ligandFile: file, result: null, selectedPose: 0 }),
             setCorrectPoseFile: (file) => set({ correctPoseFile: file }),
             setDockingEngine: (engine) => set({ dockingEngine: engine }),
+            setDockingMode: (mode) => set({ dockingMode: mode }),
 
             setParams: (params) => set((state) => ({
                 params: { ...state.params, ...params }
