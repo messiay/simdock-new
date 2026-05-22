@@ -29,6 +29,7 @@ export function MoleculeViewer() {
         resetViewTrigger,
         theme,
         showBox,
+        dockingMode,
     } = useDockingStore();
 
     // Initialize the viewer
@@ -199,11 +200,17 @@ export function MoleculeViewer() {
                     }
                     
                     const lModel = viewer.addModel(processedContent, renderFormat);
-                    // Use ball-and-stick style for better visibility
-                    lModel.setStyle({}, { 
-                        stick: { colorscheme: 'ligandCarbon', radius: 0.15 },
-                        sphere: { colorscheme: 'ligandCarbon', scale: 0.25 }
-                    });
+                    
+                    if (dockingMode === 'ppd' || (params as any).engine === 'ppd') {
+                        // Render massive proteins as a sleek cartoon so they don't engulf Protein 1
+                        lModel.setStyle({}, { cartoon: { color: 'magenta' } });
+                    } else {
+                        // Use ball-and-stick style for small-molecule ligands
+                        lModel.setStyle({}, { 
+                            stick: { colorscheme: 'ligandCarbon', radius: 0.15 },
+                            sphere: { colorscheme: 'ligandCarbon', scale: 0.25 }
+                        });
+                    }
                     
                     // Zoom to ligand if it's a result pose (might have moved significantly)
                     if (hasResult) {

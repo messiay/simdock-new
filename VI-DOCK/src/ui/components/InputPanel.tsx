@@ -163,20 +163,6 @@ export function InputPanel() {
             <div className="input-section">
                 <div className="section-header">
                     <h2>Input Files</h2>
-                    <div className="mode-toggle">
-                        <button 
-                            className={`mode-btn ${dockingMode === 'vina' ? 'active' : ''}`}
-                            onClick={() => setDockingMode('vina')}
-                        >
-                            Protein-Ligand
-                        </button>
-                        <button 
-                            className={`mode-btn ${dockingMode === 'ppd' ? 'active' : ''}`}
-                            onClick={() => setDockingMode('ppd')}
-                        >
-                            Protein-Protein
-                        </button>
-                    </div>
                 </div>
 
                 <div className="files-grid">

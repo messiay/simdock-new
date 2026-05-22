@@ -25,15 +25,15 @@ interface TabConfig {
 }
 
 export function Sidebar() {
-    const { activeTab, setActiveTab, isRunning, result, startOver, theme, toggleTheme } = useDockingStore();
+    const { activeTab, setActiveTab, isRunning, result, startOver, theme, toggleTheme, dockingMode } = useDockingStore();
     const navRef = useRef<HTMLElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
 
     const tabs: TabConfig[] = [
         { id: 'prep', label: 'Molecule Import', icon: <TestTube2 size={20} /> },
-        { id: 'input', label: 'Input Parameters', icon: <ClipboardList size={20} /> },
-        { id: 'batch', label: 'Batch Mode', icon: <Layers size={20} /> },
+        ...(dockingMode === 'vina' ? [{ id: 'input', label: 'Input Parameters', icon: <ClipboardList size={20} /> } as TabConfig] : []),
+        ...(dockingMode === 'vina' ? [{ id: 'batch', label: 'Batch Mode', icon: <Layers size={20} /> } as TabConfig] : []),
         { id: 'running', label: 'Running Docking', icon: <PlayCircle size={20} />, disabled: () => !isRunning },
         { id: 'output', label: 'Output', icon: <BarChart3 size={20} />, disabled: () => !result },
         { id: 'projects', label: 'Mission Log', icon: <Database size={20} /> },

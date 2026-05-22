@@ -3,7 +3,7 @@ import { ArrowRight, TestTube2, Layers } from 'lucide-react';
 import '../styles/LandingPanel.css';
 
 export function LandingPanel() {
-    const { setActiveTab } = useDockingStore();
+    const { setActiveTab, setDockingMode } = useDockingStore();
 
     return (
         <div className="landing-overlay">
@@ -21,30 +21,36 @@ export function LandingPanel() {
                 {/* Mode Selection Cards */}
                 <div className="mode-grid">
 
-                    {/* Single Docking Card */}
-                    <div className="mode-card single" onClick={() => setActiveTab('prep')}>
+                    {/* Protein-Ligand Docking Card */}
+                    <div className="mode-card single" onClick={() => {
+                        setDockingMode('vina');
+                        setActiveTab('prep');
+                    }}>
                         <div className="card-bg"></div>
                         <div className="card-icon">
                             <TestTube2 size={40} />
                         </div>
                         <div className="card-info">
-                            <h3>Single Docking</h3>
-                            <p>Interactive single-ligand screening with real-time visualization.</p>
+                            <h3>Protein-Ligand Docking</h3>
+                            <p>Interactive small-molecule screening with real-time visualization.</p>
                         </div>
                         <div className="card-arrow">
                             <ArrowRight size={20} />
                         </div>
                     </div>
 
-                    {/* Batch Docking Card */}
-                    <div className="mode-card batch" onClick={() => setActiveTab('batch')}>
+                    {/* Protein-Protein Docking Card */}
+                    <div className="mode-card batch" onClick={() => {
+                        setDockingMode('ppd');
+                        setActiveTab('prep');
+                    }}>
                         <div className="card-bg"></div>
                         <div className="card-icon">
                             <Layers size={40} />
                         </div>
                         <div className="card-info">
-                            <h3>Batch Docking</h3>
-                            <p>High-throughput M × N screening for library validation.</p>
+                            <h3>Protein-Protein Docking</h3>
+                            <p>High-performance LightDock simulations for macromolecular complexes.</p>
                         </div>
                         <div className="card-arrow">
                             <ArrowRight size={20} />
