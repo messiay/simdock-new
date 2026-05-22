@@ -354,58 +354,153 @@ class PpdConfig(BaseModel):
     ligand_file: str
 
 def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
-    """Background task for Protein-Protein Docking using LightDock or Fast Mock."""
+    """Background task for Protein-Protein Docking using LightDock."""
+    import subprocess
+    import shutil as shutil_mod
     jobs[job_id]["status"] = "running"
     try:
         project_path_obj = Path(project_path)
-        
-        # Locate files
+
+        # --- Locate receptor ---
         rec_name = Path(config.receptor_file).name
-        receptor_path = str(project_path_obj / "receptors" / rec_name)
-        if not Path(receptor_path).exists():
-            receptor_path = str(project_path_obj / config.receptor_file)
-            
+        receptor_path = project_path_obj / "receptors" / rec_name
+        if not receptor_path.exists():
+            receptor_path = project_path_obj / config.receptor_file
+        receptor_path = str(receptor_path)
+
+        # --- Locate ligand (Protein B) ---
         lig_name = Path(config.ligand_file).name
-        ligand_path = str(project_path_obj / "ligands" / lig_name)
-        if not Path(ligand_path).exists():
-            ligand_path = str(project_path_obj / config.ligand_file)
-            
+        ligand_path = project_path_obj / "ligands" / lig_name
+        if not ligand_path.exists():
+            ligand_path = project_path_obj / config.ligand_file
+        ligand_path = str(ligand_path)
+
         results_dir = project_path_obj / "results"
         results_dir.mkdir(exist_ok=True)
-        output_file = str(results_dir / f"ppd_out_{job_id}.pdb")
+        final_output = str(results_dir / f"ppd_out_{job_id}.pdb")
 
         print(f"DEBUG: PPD Receptor: {receptor_path}")
         print(f"DEBUG: PPD Protein B: {ligand_path}")
-        
-        # -------------------------------------------------------------
-        # PPD ENGINE INTEGRATION (HDOCK/LIGHTDOCK)
-        # Because PPD requires heavy computation, for the context of this 
-        # real-time web UI, we will invoke a subprocess to run LightDock 
-        # or equivalent. For now, we simulate the merge of the two PDBs 
-        # to ensure the viewer pipeline works flawlessly while the user 
-        # provisions a heavy-compute Colab instance.
-        # -------------------------------------------------------------
-        
-        # FAST MOCK: Merge the two PDBs into a single complex for viewing
-        with open(receptor_path, 'r') as r_file, open(ligand_path, 'r') as l_file, open(output_file, 'w') as o_file:
-            o_file.write(r_file.read())
-            o_file.write("\nTER\n")
-            o_file.write(l_file.read())
-            o_file.write("\nEND\n")
-            
-        # Simulate heavy compute time
-        import time
-        time.sleep(5)
-        
-        result = {
-            "success": True,
-            "output_file": output_file,
-            "score": -45.2, # Mock binding energy for PPD
-        }
-        
+
+        # ---------------------------------------------------------------
+        # Check if LightDock is installed
+        # ---------------------------------------------------------------
+        ld_setup = shutil_mod.which("lightdock3_setup.py") or shutil_mod.which("lightdock3_setup")
+        ld_run   = shutil_mod.which("lightdock3.py") or shutil_mod.which("lightdock3")
+        ld_rank  = shutil_mod.which("lgd_rank.py") or shutil_mod.which("lgd_rank")
+        ld_gen   = shutil_mod.which("lgd_generate_conformations.py") or shutil_mod.which("lgd_generate_conformations")
+
+        if ld_setup and ld_run and ld_rank:
+            print("INFO: LightDock found. Running real protein-protein docking...")
+
+            # LightDock needs its own working directory
+            ld_work_dir = results_dir / f"lightdock_{job_id}"
+            ld_work_dir.mkdir(exist_ok=True)
+
+            # --- Step 1: Setup (generates ANM modes & swarm positions) ---
+            num_swarms    = 25
+            num_glowworms = 200
+            sim_steps     = 100
+            setup_cmd = [
+                ld_setup, receptor_path, ligand_path,
+                "-s", str(num_swarms),
+                "-g", str(num_glowworms),
+                "--noxt", "--noh", "--now",
+            ]
+            print(f"DEBUG: Setup cmd: {' '.join(setup_cmd)}")
+            res = subprocess.run(setup_cmd, capture_output=True, text=True, cwd=str(ld_work_dir))
+            if res.returncode != 0:
+                raise RuntimeError(f"LightDock setup failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
+
+            # --- Step 2: Simulation ---
+            run_cmd = [ld_run, str(num_swarms), str(sim_steps)]
+            print(f"DEBUG: Run cmd: {' '.join(run_cmd)}")
+            res = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(ld_work_dir), timeout=900)
+            if res.returncode != 0:
+                raise RuntimeError(f"LightDock simulation failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
+
+            # --- Step 3: Rank poses ---
+            rank_cmd = [ld_rank, str(num_swarms), str(sim_steps)]
+            print(f"DEBUG: Rank cmd: {' '.join(rank_cmd)}")
+            subprocess.run(rank_cmd, capture_output=True, text=True, cwd=str(ld_work_dir))
+
+            # --- Step 4: Parse top score ---
+            ranking_file = ld_work_dir / "rank_by_scoring.list"
+            top_score = None
+            top_poses = []
+            if ranking_file.exists():
+                with open(ranking_file) as rf:
+                    for line in rf:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            try:
+                                score_val = float(parts[2])
+                                top_poses.append({
+                                    "swarm": parts[0], "step": parts[1], "score": score_val
+                                })
+                                if top_score is None or score_val < top_score:
+                                    top_score = score_val
+                            except ValueError:
+                                pass
+
+            # --- Step 5: Generate best complex PDB ---
+            if ld_gen:
+                subprocess.run(
+                    [ld_gen, "1"],
+                    capture_output=True, text=True, cwd=str(ld_work_dir)
+                )
+
+            generated = list(ld_work_dir.glob("lightdock_*.pdb"))
+            if generated:
+                shutil_mod.copy(str(generated[0]), final_output)
+            else:
+                # Merge as fallback if generation fails
+                with open(receptor_path) as r, open(ligand_path) as l, open(final_output, "w") as o:
+                    o.write(r.read())
+                    o.write("\nTER\n")
+                    o.write(l.read())
+                    o.write("\nEND\n")
+
+            result = {
+                "success": True,
+                "engine": "lightdock",
+                "output_file": final_output,
+                "score": round(top_score, 3) if top_score is not None else 0.0,
+                "top_poses": top_poses[:10],
+                "num_swarms": num_swarms,
+                "sim_steps": sim_steps,
+            }
+
+        else:
+            # ---------------------------------------------------------------
+            # LightDock NOT installed — merge PDBs and flag as fallback
+            # ---------------------------------------------------------------
+            print("WARNING: LightDock not installed. Using structural merge fallback.")
+            print("         To enable real docking: pip install lightdock")
+            with open(receptor_path) as r, open(ligand_path) as l, open(final_output, "w") as o:
+                o.write(r.read())
+                o.write("\nTER\n")
+                o.write(l.read())
+                o.write("\nEND\n")
+
+            result = {
+                "success": True,
+                "engine": "fallback_merge",
+                "output_file": final_output,
+                "score": None,
+                "warning": (
+                    "LightDock is not installed on this server. The output file is a simple "
+                    "structural merge of both proteins with no docking score. "
+                    "Install it with: pip install lightdock"
+                ),
+            }
+
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["result"] = result
-        
+
     except Exception as e:
         print(f"CRITICAL ERROR in PPD task {job_id}: {e}")
         import traceback
