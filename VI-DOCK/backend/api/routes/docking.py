@@ -505,6 +505,12 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
                 "top_poses": top_poses[:10],
                 "num_swarms": num_swarms,
                 "sim_steps": sim_steps,
+                "debug_info": {
+                    "rank_cmd": rank_cmd,
+                    "rank_stdout": rank_res.stdout,
+                    "rank_stderr": rank_res.stderr,
+                    "files_in_dir": [str(f.relative_to(ld_work_dir)) for f in all_files]
+                }
             }
 
         else:
