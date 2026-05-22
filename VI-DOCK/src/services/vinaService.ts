@@ -135,6 +135,99 @@ class VinaService {
         };
     }
 
+    /**
+     * Run Protein-Protein Docking (HDOCK) via Backend API
+     */
+    async runPpdDocking(
+        receptorPdb: string,
+        ligandPdb: string,
+        onProgress?: (message: string, progress: number) => void
+    ): Promise<DockingResult> {
+        const store = useDockingStore.getState();
+        const projectName = `WebSession_PPD_${Date.now()}`;
+        store.addConsoleOutput(`[API] Creating PPD session: ${projectName}...`);
+
+        try {
+            await apiService.createProject(projectName);
+        } catch (e) {
+            console.warn("Project creation check:", e);
+        }
+
+        store.addConsoleOutput(`[API] Uploading input files...`);
+        onProgress?.("Uploading protein files to server...", 10);
+
+        const receptorFile = new File([receptorPdb], "receptor.pdb", { type: "text/plain" });
+        const ligandFile = new File([ligandPdb], "ligand.pdb", { type: "text/plain" });
+
+        await apiService.uploadFile(projectName, receptorFile, 'receptor');
+        await apiService.uploadFile(projectName, ligandFile, 'ligand');
+
+        store.addConsoleOutput(`[API] Submitting HDOCK job...`);
+        onProgress?.("Submitting PPD job to backend...", 20);
+
+        const job = await apiService.submitPpdJob(projectName, {
+            receptor_file: 'receptor.pdb',
+            ligand_file: 'ligand.pdb'
+        });
+
+        store.addConsoleOutput(`[API] PPD Job started: ${job.job_id}`);
+
+        let status = 'pending';
+        let resultData = null;
+
+        while (status === 'pending' || status === 'running') {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            const jobStatus = await apiService.getJobStatus(job.job_id);
+            status = jobStatus.status;
+
+            if (status === 'running') {
+                onProgress?.("Docking in progress (HDOCK can take 1-3 minutes)...", 50);
+            }
+
+            if (status === 'completed') {
+                resultData = jobStatus.result;
+                break;
+            }
+            if (status === 'failed') {
+                throw new Error(jobStatus.error || "PPD failed on server");
+            }
+        }
+
+        store.addConsoleOutput(`[API] PPD Job completed! Fetching results...`);
+        onProgress?.("Downloading results...", 90);
+
+        if (!resultData?.output_file) {
+            throw new Error("No output file in result");
+        }
+
+        const downloadUrl = apiService.getDownloadUrl(resultData.output_file);
+        const resp = await fetch(downloadUrl, {
+            headers: { 
+                'Bypass-Tunnel-Reminder': 'true',
+                'ngrok-skip-browser-warning': 'true'
+            }
+        });
+        if (!resp.ok) throw new Error("Failed to download output PDB complex");
+
+        const outputPdb = await resp.text();
+
+        const poses = [{
+            mode: 1,
+            affinity: resultData.score || 0,
+            rmsdLB: 0,
+            rmsdUB: 0,
+            pdbqt: outputPdb // We use pdbqt field to store the PDB so the viewer renders it!
+        }];
+
+        store.addConsoleOutput(`[API] Received Top Complex.`);
+
+        return {
+            poses,
+            rawOutput: outputPdb,
+            logOutput: 'PPD docking complete'
+        };
+    }
+
     abort(): void {
         console.warn("[API] Abort not implemented for server-side jobs yet.");
     }

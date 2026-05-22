@@ -37,7 +37,6 @@ export function Sidebar() {
         { id: 'running', label: 'Running Docking', icon: <PlayCircle size={20} />, disabled: () => !isRunning },
         { id: 'output', label: 'Output', icon: <BarChart3 size={20} />, disabled: () => !result },
         { id: 'projects', label: 'Mission Log', icon: <Database size={20} /> },
-        { id: 'copilot', label: 'AI Copilot', icon: <Sparkles size={20} /> },
     ];
 
     // Check if scrolling is possible

@@ -26,6 +26,7 @@ export function InputPanel() {
     } = useDockingStore();
 
     const [autoRemoveNonProtein, setAutoRemoveNonProtein] = useState(true);
+    const [dockingMode, setDockingMode] = useState<'vina' | 'ppd'>('vina');
     const [error, setError] = useState<string | null>(null);
 
     const canRun = receptorFile && ligandFile;
@@ -60,63 +61,85 @@ export function InputPanel() {
 
 
         try {
-            // Prepare files (convert to PDBQT if needed)
-            let receptorPdbqt = receptorFile.content;
-            let ligandPdbqt = ligandFile.content;
+            if (dockingMode === 'ppd') {
+                // Protein-Protein mode
+                let receptorPdb = receptorFile.content;
+                let ligandPdb = ligandFile.content;
+                
+                // Call HDOCK Service
+                const result = await vinaService.runPpdDocking(
+                    receptorPdb,
+                    ligandPdb,
+                    (message, progress) => {
+                        setProgress(progress);
+                        setStatusMessage(message);
+                        addConsoleOutput(message);
+                    }
+                );
 
-            // Convert PDB to PDBQT via backend API
-            if (receptorFile.format === 'pdb' && !isValidPdbqt(receptorPdbqt)) {
-                addConsoleOutput('Converting receptor to PDBQT via API...');
-                try {
-                    receptorPdbqt = await apiService.convertPdbToPdbqt(receptorPdbqt);
-                    addConsoleOutput('Receptor conversion successful.');
-                } catch (convErr: any) {
-                    addConsoleOutput(`ERROR: Receptor conversion failed: ${convErr.message}`);
-                    throw new Error(`Receptor conversion failed: ${convErr.message}`);
+                setResult(result);
+                setActiveTab('output');
+                addConsoleOutput('\n=== PPD Complete ===');
+                addConsoleOutput(`Retrieved Top PPD Complex`);
+            } else {
+                // Protein-Ligand mode (Vina)
+                let receptorPdbqt = receptorFile.content;
+                let ligandPdbqt = ligandFile.content;
+
+                // Convert PDB to PDBQT via backend API
+                if (receptorFile.format === 'pdb' && !isValidPdbqt(receptorPdbqt)) {
+                    addConsoleOutput('Converting receptor to PDBQT via API...');
+                    try {
+                        receptorPdbqt = await apiService.convertPdbToPdbqt(receptorPdbqt);
+                        addConsoleOutput('Receptor conversion successful.');
+                    } catch (convErr: any) {
+                        addConsoleOutput(`ERROR: Receptor conversion failed: ${convErr.message}`);
+                        throw new Error(`Receptor conversion failed: ${convErr.message}`);
+                    }
                 }
+
+                // Convert SDF/MOL to PDBQT via backend API
+                if (ligandFile.format === 'sdf' || ligandPdbqt.includes('V2000') || ligandPdbqt.includes('$$$$') || ligandPdbqt.includes('M  END')) {
+                    addConsoleOutput('Converting ligand SDF to PDBQT via API...');
+                    try {
+                        ligandPdbqt = await apiService.convertSdfToPdbqt(ligandPdbqt);
+                        addConsoleOutput('Ligand conversion successful.');
+                    } catch (convErr: any) {
+                        addConsoleOutput(`Warning: SDF conversion failed: ${convErr.message}`);
+                    }
+                } else if (ligandFile.format === 'pdb' && !isValidPdbqt(ligandPdbqt)) {
+                    addConsoleOutput('Converting ligand PDB to PDBQT via API...');
+                    try {
+                        ligandPdbqt = await apiService.convertPdbToPdbqt(ligandPdbqt);
+                        addConsoleOutput('Ligand conversion successful.');
+                    } catch (convErr: any) {
+                        addConsoleOutput(`Warning: PDB conversion failed: ${convErr.message}`);
+                    }
+                }
+
+                // Final validation - ensure we have content
+                if (!ligandPdbqt || ligandPdbqt.trim().length === 0) {
+                    throw new Error('Ligand content is empty after conversion');
+                }
+                addConsoleOutput(`Ligand ready: ${ligandPdbqt.length} characters`);
+
+                // Run docking
+                const result = await vinaService.runDocking(
+                    receptorPdbqt,
+                    ligandPdbqt,
+                    params,
+                    (message, progress) => {
+                        setProgress(progress);
+                        setStatusMessage(message);
+                        addConsoleOutput(message);
+                    }
+                );
+
+                setResult(result);
+                setActiveTab('output');
+                addConsoleOutput('\n=== Docking Complete ===');
+                addConsoleOutput(`Found ${result.poses.length} binding modes`);
             }
-
-            // Convert SDF/MOL to PDBQT via backend API
-            if (ligandFile.format === 'sdf' || ligandPdbqt.includes('V2000') || ligandPdbqt.includes('$$$$') || ligandPdbqt.includes('M  END')) {
-                addConsoleOutput('Converting ligand SDF to PDBQT via API...');
-                try {
-                    ligandPdbqt = await apiService.convertSdfToPdbqt(ligandPdbqt);
-                    addConsoleOutput('Ligand conversion successful.');
-                } catch (convErr: any) {
-                    addConsoleOutput(`Warning: SDF conversion failed: ${convErr.message}`);
-                }
-            } else if (ligandFile.format === 'pdb' && !isValidPdbqt(ligandPdbqt)) {
-                addConsoleOutput('Converting ligand PDB to PDBQT via API...');
-                try {
-                    ligandPdbqt = await apiService.convertPdbToPdbqt(ligandPdbqt);
-                    addConsoleOutput('Ligand conversion successful.');
-                } catch (convErr: any) {
-                    addConsoleOutput(`Warning: PDB conversion failed: ${convErr.message}`);
-                }
-            }
-
-            // Final validation - ensure we have content
-            if (!ligandPdbqt || ligandPdbqt.trim().length === 0) {
-                throw new Error('Ligand content is empty after conversion');
-            }
-            addConsoleOutput(`Ligand ready: ${ligandPdbqt.length} characters`);
-
-            // Run docking
-            const result = await vinaService.runDocking(
-                receptorPdbqt,
-                ligandPdbqt,
-                params,
-                (message, progress) => {
-                    setProgress(progress);
-                    setStatusMessage(message);
-                    addConsoleOutput(message);
-                }
-            );
-
-            setResult(result);
-            setActiveTab('output');
-            addConsoleOutput('\n=== Docking Complete ===');
-            addConsoleOutput(`Found ${result.poses.length} binding modes`);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Docking failed';
@@ -139,6 +162,20 @@ export function InputPanel() {
             <div className="input-section">
                 <div className="section-header">
                     <h2>Input Files</h2>
+                    <div className="mode-toggle">
+                        <button 
+                            className={`mode-btn ${dockingMode === 'vina' ? 'active' : ''}`}
+                            onClick={() => setDockingMode('vina')}
+                        >
+                            Protein-Ligand
+                        </button>
+                        <button 
+                            className={`mode-btn ${dockingMode === 'ppd' ? 'active' : ''}`}
+                            onClick={() => setDockingMode('ppd')}
+                        >
+                            Protein-Protein
+                        </button>
+                    </div>
                 </div>
 
                 <div className="files-grid">
@@ -159,10 +196,10 @@ export function InputPanel() {
                     </div>
 
                     <div className="file-column">
-                        <LigandUpload />
+                        <LigandUpload mode={dockingMode} />
                         <CorrectPoseUpload />
 
-                        {ligandFile && (
+                        {ligandFile && dockingMode === 'vina' && (
                             <button className="auto-box-btn" onClick={handleAutoBox}>
                                 <Crosshair size={16} /> Auto-calculate box from ligand
                             </button>
@@ -171,32 +208,38 @@ export function InputPanel() {
                 </div>
             </div>
 
-            <div className="params-section">
-                <div className="params-grid">
-                    <DockingBoxPanel />
-                </div>
-            </div>
-
-            {/* ADVANCED TOGGLE */}
-            <div className="advanced-config-toggle">
-                <button 
-                    className={`toggle-btn ${showAdvanced ? 'active' : ''}`}
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                    <span className="icon">⚙️</span>
-                    {showAdvanced ? 'Hide Vina Parameters' : 'Show Vina Parameters'}
-                    <span className="arrow">{showAdvanced ? '▲' : '▼'}</span>
-                </button>
-            </div>
-
-            {showAdvanced && (
-                <div className="advanced-sections-container">
-                    <div className="params-section">
-                        <div className="params-grid">
-                            <VinaOptionsPanel />
-                        </div>
+            {dockingMode === 'vina' && (
+                <div className="params-section">
+                    <div className="params-grid">
+                        <DockingBoxPanel />
                     </div>
                 </div>
+            )}
+
+            {/* ADVANCED TOGGLE */}
+            {dockingMode === 'vina' && (
+                <>
+                    <div className="advanced-config-toggle">
+                        <button 
+                            className={`toggle-btn ${showAdvanced ? 'active' : ''}`}
+                            onClick={() => setShowAdvanced(!showAdvanced)}
+                        >
+                            <span className="icon">⚙️</span>
+                            {showAdvanced ? 'Hide Vina Parameters' : 'Show Vina Parameters'}
+                            <span className="arrow">{showAdvanced ? '▲' : '▼'}</span>
+                        </button>
+                    </div>
+
+                    {showAdvanced && (
+                        <div className="advanced-sections-container">
+                            <div className="params-section">
+                                <div className="params-grid">
+                                    <VinaOptionsPanel />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             {error && (

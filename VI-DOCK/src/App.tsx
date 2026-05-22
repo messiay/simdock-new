@@ -12,7 +12,6 @@ import { MoleculeViewer } from './ui/components/MoleculeViewer';
 import { DraggablePanel } from './ui/components/DraggablePanel';
 import { FloatingToolbar } from './ui/components/FloatingToolbar'; // Keep toolbar
 import BackgroundGrid from './ui/components/BackgroundGrid';
-import { CopilotPanel } from './ui/components/CopilotPanel';
 // gridboxCalculator imported on-demand if needed
 import './App.css';
 
@@ -67,12 +66,6 @@ function App() {
         return (
           <DraggablePanel title="Mission Log" width="400px" initialX={60} initialY={80}>
             <ProjectPanel />
-          </DraggablePanel>
-        );
-      case 'copilot':
-        return (
-          <DraggablePanel title="AI Copilot" width="480px" initialX={60} initialY={80}>
-            <CopilotPanel />
           </DraggablePanel>
         );
       default:

@@ -18,14 +18,11 @@ export interface JobStatus {
 
 
 
-let BASE_URL = (typeof window !== 'undefined' ? localStorage.getItem('vidocks-api-url') : null) || config.API_BASE_URL;
+let BASE_URL = config.API_BASE_URL;
 BASE_URL = BASE_URL.replace(/\/$/, '');
 
 export const apiService = {
     setApiBaseUrl(url: string) {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('vidocks-api-url', url);
-        }
         BASE_URL = url.replace(/\/$/, '');
     },
     getApiBaseUrl() {
@@ -34,7 +31,7 @@ export const apiService = {
     async createProject(name: string) {
         const response = await fetch(`${BASE_URL}/projects/`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ name })
@@ -49,7 +46,7 @@ export const apiService = {
 
         const response = await fetch(`${BASE_URL}/projects/${projectName}/upload?category=${category}`, {
             method: 'POST',
-            headers: {  },
+            headers: { 'bypass-tunnel-reminder': 'true',  },
             body: formData
         });
 
@@ -69,7 +66,7 @@ export const apiService = {
     }) {
         const response = await fetch(`${BASE_URL}/docking/${projectName}/dock`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(configData)
@@ -79,12 +76,30 @@ export const apiService = {
             const err = await response.json();
             throw new Error(err.detail || 'Job submission failed');
         }
+    },
+
+    async submitPpdJob(projectName: string, configData: {
+        receptor_file: string;
+        ligand_file: string;
+    }) {
+        const response = await fetch(`${BASE_URL}/docking/${projectName}/dock-pp`, {
+            method: 'POST',
+            headers: { 'bypass-tunnel-reminder': 'true', 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(configData)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'PPD Job submission failed');
+        }
         return response.json();
     },
 
     async getJobStatus(jobId: string): Promise<JobStatus> {
         const response = await fetch(`${BASE_URL}/docking/jobs/${jobId}`, {
-            headers: {  }
+            headers: { 'bypass-tunnel-reminder': 'true',  }
         });
         if (!response.ok) throw new Error('Failed to check job status');
         return response.json();
@@ -106,7 +121,7 @@ export const apiService = {
     async convertPdbToPdbqt(pdbContent: string, addHydrogens: boolean = true): Promise<string> {
         const response = await fetch(`${BASE_URL}/convert/pdb-to-pdbqt`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -130,7 +145,7 @@ export const apiService = {
     async convertSdfToPdbqt(sdfContent: string, addHydrogens: boolean = true): Promise<string> {
         const response = await fetch(`${BASE_URL}/convert/sdf-to-pdbqt`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -154,7 +169,7 @@ export const apiService = {
     async convertSmilesToPdbqt(smiles: string, name: string = 'ligand'): Promise<string> {
         const response = await fetch(`${BASE_URL}/convert/smiles-to-pdbqt`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ smiles, name })
@@ -174,7 +189,7 @@ export const apiService = {
      */
     async fetchPdb(pdbId: string): Promise<{ pdb_content: string; title: string }> {
         const response = await fetch(`${BASE_URL}/fetch/pdb/${pdbId}`, {
-            headers: {  }
+            headers: { 'bypass-tunnel-reminder': 'true',  }
         });
 
         if (!response.ok) {
@@ -191,7 +206,7 @@ export const apiService = {
      */
     async fetchPubChem(query: string): Promise<{ sdf_content: string; pdbqt_content: string; name: string }> {
         const response = await fetch(`${BASE_URL}/fetch/pubchem/${encodeURIComponent(query)}?convert_to_pdbqt=true`, {
-            headers: {  }
+            headers: { 'bypass-tunnel-reminder': 'true',  }
         });
 
         if (!response.ok) {
@@ -208,7 +223,7 @@ export const apiService = {
     async findPockets(projectName: string, receptorFile: string): Promise<any[]> {
         const response = await fetch(`${BASE_URL}/analysis/${projectName}/pockets?receptor_file=${receptorFile}`, {
             method: 'POST',
-            headers: {  }
+            headers: { 'bypass-tunnel-reminder': 'true',  }
         });
 
         if (!response.ok) {
@@ -225,7 +240,7 @@ export const apiService = {
     async queryCopilot(query: string, targetProtein?: string, ligandSmiles?: string, useRawGemma: boolean = false) {
         const response = await fetch(`${BASE_URL}/txagent/query`, {
             method: 'POST',
-            headers: { 
+            headers: { 'bypass-tunnel-reminder': 'true', 
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -241,6 +256,26 @@ export const apiService = {
             throw new Error(err.detail || 'AI Copilot query failed');
         }
 
-        return response.json();
+        const submitData = await response.json();
+        const jobId = submitData.job_id;
+        
+        // Poll for completion
+        while (true) {
+            await new Promise(r => setTimeout(r, 3000));
+            const statusRes = await fetch(`${BASE_URL}/txagent/status/${jobId}`, {
+                headers: { 'bypass-tunnel-reminder': 'true' }
+            });
+            
+            if (!statusRes.ok) throw new Error('Failed to check Copilot status');
+            
+            const statusData = await statusRes.json();
+            
+            if (statusData.status === 'completed') {
+                return statusData.result;
+            } else if (statusData.status === 'failed') {
+                throw new Error(statusData.error || 'AI Copilot encountered an error');
+            }
+            // If pending or running, continue loop
+        }
     }
 };

@@ -1,3 +1,4 @@
+https://zenodo.org/records/20131699
 # VIDocks Pro 🧬
 **High-Performance Cloud-Powered Molecular Docking Platform**
 
