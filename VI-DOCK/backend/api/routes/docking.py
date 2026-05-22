@@ -414,19 +414,27 @@ def run_ppd_task(job_id: str, config: PpdConfig, project_path: str):
             ld_work_dir = results_dir / f"lightdock_{job_id}"
             ld_work_dir.mkdir(exist_ok=True)
 
+            # Copy input files to work dir because LightDock setup generates
+            # temporary 'lightdock_X.pdb' files in the same directory as the inputs!
+            local_receptor = ld_work_dir / Path(receptor_path).name
+            local_ligand = ld_work_dir / Path(ligand_path).name
+            shutil_mod.copy(receptor_path, local_receptor)
+            shutil_mod.copy(ligand_path, local_ligand)
+
             # --- Step 1: Setup (generates ANM modes & swarm positions) ---
             num_swarms    = 25
             num_glowworms = 200
             sim_steps     = 100
             setup_cmd = [
-                ld_setup, receptor_path, ligand_path,
+                ld_setup, str(local_receptor), str(local_ligand),
                 "-s", str(num_swarms),
                 "-g", str(num_glowworms),
                 "--noxt", "--noh", "--now",
             ]
             print(f"DEBUG: Setup cmd: {' '.join(setup_cmd)}")
             res = subprocess.run(setup_cmd, capture_output=True, text=True, cwd=str(ld_work_dir))
-            if res.returncode != 0:
+            # LightDock setup returns 0 even on some errors, so we check stderr too
+            if res.returncode != 0 or "[LightDockError]" in res.stderr:
                 raise RuntimeError(f"LightDock setup failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
 
             # --- Step 2: Simulation ---
